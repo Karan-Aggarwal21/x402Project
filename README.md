@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agent Spend Policy Guard (ASPG)
 
-## Getting Started
+A policy-enforcement gateway for **x402** autonomous agent payments.
+Built for ACTS EDC **Brainwave 2026**, Problem Statement Set-2, **PS-1**.
 
-First, run the development server:
+> ASPG evaluates every autonomous agent payment against configurable financial, merchant, velocity,
+> network and risk policies **before** the payment payload is signed or settled - auto-approving
+> low-risk payments, blocking violations, escalating ambiguous ones for human review, and keeping a
+> complete audit trail.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**The one sentence this project is judged on:**
+*"The agent tried to spend $2. The Guard refused. The blockchain has no record of the attempt."*
+
+---
+
+## Where things live
+
+```
+x402-Brainwaves Project/          <- outer working folder
+├─ Docs/                          <- PRD, Architecture, API docs, plans (+ PDF twins)
+├─ Initial-Docs/                  <- the problem statement and reference PDFs
+└─ x402project/                   <- THIS Next.js app = the git repository
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`Docs/` and `Initial-Docs/` sit outside the git repository. Paths below are relative to
+`x402project/`, so the docs are at `../Docs/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Repository map
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Path | Owner | What lives here |
+|---|---|---|
+| `app/` | shared shell | Thin Next.js routing. Every file is a 2-line re-export. Frozen after hour 0. |
+| `src/shared/` | frozen contracts | Types, error codes, money helpers. The only cross-owner import. |
+| `src/payments/` | **PAY** | x402 adapter, intent builder, wallet + signer, gateway orchestrator |
+| `src/core/` | **CORE** | DB schema, policy engine, budget ledger, velocity, risk, audit, control API |
+| `src/dashboard/` | **UI** | Every page and component. Talks to the server over HTTP only. |
+| `src/demo/` | **DEMO** | x402 merchant sandbox, AI agent, simulator, attack drills |
+| `../Docs/` | DEMO | PRD, Architecture, API docs, dev plan, repo structure (+ PDF twins) |
 
-## Learn More
+Each `src/<division>/README.md` explains that division in full: mission, files, public API,
+dependencies, day-0 tasks, definition of done.
 
-To learn more about Next.js, take a look at the following resources:
+## Read before your first commit
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. [../Docs/PRD.md](../Docs/PRD.md) - what we build and why
+2. [../Docs/ARCHITECTURE.md](../Docs/ARCHITECTURE.md) - how it works, all diagrams
+3. [../Docs/API_DOCS.md](../Docs/API_DOCS.md) - every endpoint contract
+4. [../Docs/DEVELOPMENT_PLAN.md](../Docs/DEVELOPMENT_PLAN.md) - phases, hours, owners
+5. [../Docs/REPO_STRUCTURE.md](../Docs/REPO_STRUCTURE.md) - who owns which file
+6. Your own `src/<division>/README.md`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Stack
 
-## Deploy on Vercel
+Next.js 16 (App Router) · React 19 · TypeScript · **Tailwind v4** (CSS config in `app/globals.css`,
+there is no `tailwind.config.ts`) · PostgreSQL + Drizzle · `@x402/*` + viem · Base Sepolia.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> ⚠️ This is Next.js 16. See [`AGENTS.md`](AGENTS.md) - APIs and conventions differ from older
+> versions. Check `node_modules/next/dist/docs/` before writing routing or data-fetching code.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local     # fill from the group chat
+npm run db:push && npm run db:seed
+npm run dev
+```
+
+Two dependency groups are **not** installed yet, on purpose:
+
+| Group | Installed by | When |
+|---|---|---|
+| `@x402/fetch @x402/evm @x402/next` | PAY | Phase 0, after pinning the real versions |
+| `ai @ai-sdk/groq` | DEMO | Phase 4c, only for the prompt-injection demo |
+
+## Non-negotiable rules
+
+1. The policy decision is **deterministic**. No LLM ever decides whether money may leave a wallet.
+2. **Deny by default.** Unknown merchant, unknown network, missing policy or an engine error all
+   resolve to `BLOCK`.
+3. The agent **never holds a private key**. The signer lives behind the Guard.
+4. Every decision is written to the audit log **before** the payment is signed.
+5. Testnet payments are **real payments**. Never call them "simulated".
+6. Money is stored as integer minor units (`bigint`), never as a float.
+
