@@ -55,7 +55,13 @@ async function main() {
 
   const unpaid = await fetch(TARGET, REQUEST);
   const paymentRequired = readPaymentRequired(unpaid);
-  if (!paymentRequired) throw new Error(`Expected 402 from the seller, got ${unpaid.status}.`);
+  if (!paymentRequired) {
+    // A 404 here almost always means next dev fell back to another port because 3000 was taken,
+    // so NEXT_PUBLIC_APP_URL points at whatever else is listening.
+    throw new Error(
+      `Expected 402 from the seller, got ${unpaid.status}. Is \`npm run dev\` serving ${env.APP_URL}?`,
+    );
+  }
 
   const offer = paymentRequired.accepts[0];
   console.log(`price    ${toUsd(BigInt(offer.amount))} USDC on ${offer.network}`);
