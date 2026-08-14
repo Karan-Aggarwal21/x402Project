@@ -3,7 +3,7 @@
 [BUILD.md](./BUILD.md) is the plan. **This file is the record** — what actually got built, what is
 proven, what is still open. Update it at the end of every checkpoint.
 
-Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C4 ☑ · next: **C5**
+Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C4 ☑ C5 ☑ · next: **C6**
 
 ---
 
@@ -15,7 +15,7 @@ Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C
 | C2 | Header codecs | 🟢 **green** | 12 tests pass against the real C1 captures |
 | C3 | SDK adapter + facilitator types | 🟢 **green** | 7 adapter tests + a real settlement through the split, tx `0x9e060e…8f15` |
 | C4 | Intent build + hash | 🟢 **green** | 19 tests · hash moves on all 9 judged terms, ignores key order |
-| C5 | allowToken + signer | ⚪ not started | |
+| C5 | allowToken + signer | 🟢 **green** | 10 tests · 3 mutation tests confirm each guard is load-bearing |
 | C6 | Gateway orchestrator | ⚪ not started | |
 | C7 | `POST /api/gw/request` live | ⚪ not started | 🟧 DEMO waits on this |
 
@@ -245,6 +245,66 @@ payment. A test asserts changing them does **not** move the hash.
 **Deviation:** the stub's comment listed seven fields, omitting `merchant` and `reason`. `merchant`
 is the exact key CORE's allowlist matches on, so leaving it unbound would permit the swap the hash
 exists to prevent. `reason` is the "WHY" dimension CORE can judge. Both are bound.
+
+---
+
+## C5 — allowToken and signer
+
+The signer holds the key. It refuses to sign anything the Guard did not approve.
+
+### Files
+
+| File | State |
+|---|---|
+| `wallet/allowToken.ts` | ✅ HMAC-SHA256, 60 s TTL, single use, bound to one `intentHash` |
+| `wallet/signer.ts` | ✅ four guards, then sign |
+| `tests/signer.test.ts` | ✅ 10 tests |
+| `shared/errors.ts` | ✅ appended `ALLOW_TOKEN_INVALID` (403) |
+
+### The four guards, in order
+
+| # | Guard | Stops |
+|---|---|---|
+| 1 | Recompute the hash from the intent's own terms and compare | a term mutated after evaluation |
+| 2 | Find the offer matching the intent on amount, asset, network, payTo | signing a similar-but-different offer |
+| 3 | Offer's `resource.url` host must equal the approved `merchant` | a valid offer replayed from another merchant |
+| 4 | `verifyAllowToken` — authenticity, expiry, replay, atomically consumed | forged, stale or reused authorisation |
+
+Order is deliberate: the token is consumed **last**, so a mismatch in 1–3 never burns a valid token
+and force an unnecessary re-evaluation.
+
+### allowToken shape
+
+`v1.<expiresAtMs>.<evaluationId>.<hmac>` — the `intentHash` is **never carried in the token**, only
+fed into the MAC. So a token discloses nothing and is useless against any other intent. Compared
+with `timingSafeEqual`. Verify and consume are one step, so nothing can race between them.
+
+### Proven load-bearing, not just passing
+
+Tests that pass for the wrong reason are worthless, so each guard was removed in turn:
+
+| Mutation | Tests killed |
+|---|---|
+| `verifyAllowToken` call deleted | 4 |
+| term-by-term offer match replaced with `accepts[0]` | 3 |
+| hash integrity check short-circuited | 1 |
+
+All restored, 10/10 green.
+
+### Deviations from BUILD.md
+
+| What | Why |
+|---|---|
+| `SignInput` carries `paymentRequired` (the envelope), not a single `requirements` | the SDK needs the envelope to build a payload, and searching `accepts[]` for the matching offer *is* the field-by-field re-check |
+| Added guard 3, the merchant check | BUILD.md lists amount/recipient; an offer valid at one merchant replayed against another was otherwise unblocked |
+| Appended `ALLOW_TOKEN_INVALID` to `shared/errors.ts` | CLAUDE.md requires error codes come from that catalogue. Appended at the bottom per its own append-only rule — **CORE should be told** |
+
+### Known ceiling
+
+Spent tokens live in an in-process `Map`, so replay protection is single-instance only. On Vercel
+with more than one lambda, a replay could land on a cold instance and succeed. The fix is a
+`used_allow_tokens` row under a unique constraint, so Postgres decides the race. Marked with a
+`ponytail:` comment in `allowToken.ts`.
 
 ---
 
