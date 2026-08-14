@@ -1,5 +1,4 @@
-// OWNER: PAY. Header codecs against the REAL captures recorded in C1 (../../../../Docs/x402-notes.md).
-// Every base64 string below crossed the wire during tx 0x3646125c…4eda9 on Base Sepolia.
+// OWNER: PAY. Header codecs against the REAL captures in ./fixtures.ts, never invented values.
 import { describe, expect, it } from "vitest";
 import {
   PaymentHeaderError,
@@ -8,17 +7,8 @@ import {
   decodePaymentSignature,
   encodePaymentSignature,
 } from "@/payments/x402/headers";
+import { CAPTURED_REQUIRED, CAPTURED_RESPONSE, CAPTURED_SIGNATURE, SETTLED_TX_HASH, asHeader } from "@/payments/tests/fixtures";
 
-const CAPTURED_REQUIRED =
-  "eyJ4NDAyVmVyc2lvbiI6MiwiZXJyb3IiOiJQYXltZW50IHJlcXVpcmVkIiwicmVzb3VyY2UiOnsidXJsIjoiaHR0cDovL2xvY2FsaG9zdDozMDAxL2FwaS9ndy9wb2Mtc2VsbGVyIiwiZGVzY3JpcHRpb24iOiJQQVkgQzEgc3Bpa2Ug4oCUIHRocm93YXdheSBwYWlkIGVuZHBvaW50IiwibWltZVR5cGUiOiIifSwiYWNjZXB0cyI6W3sic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiMTAwMDAiLCJhc3NldCI6IjB4MDM2Q2JENTM4NDJjNTQyNjYzNGU3OTI5NTQxZUMyMzE4ZjNkQ0Y3ZSIsInBheVRvIjoiMHgyZGU3QjkzODhDMjQ5RDIwODAwYkEwOTdlRDVERWI2NmU0NDM3RGM0IiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnsibmFtZSI6IlVTREMiLCJ2ZXJzaW9uIjoiMiJ9fV19";
-
-const CAPTURED_SIGNATURE =
-  "eyJ4NDAyVmVyc2lvbiI6MiwicGF5bG9hZCI6eyJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDBEM0NhQzVmMjc3MDVDNGM3MjE4NUI4Qjc0QTU0M0YzNTMwRjg0ZWYiLCJ0byI6IjB4MmRlN0I5Mzg4QzI0OUQyMDgwMGJBMDk3ZUQ1REViNjZlNDQzN0RjNCIsInZhbHVlIjoiMTAwMDAiLCJ2YWxpZEFmdGVyIjoiMCIsInZhbGlkQmVmb3JlIjoiMTc4NjczNDg3OSIsIm5vbmNlIjoiMHg1ZTU1ZGM5NWZmYjk4YzNjNzhkYzllZjk4ZWMxMTY4YTNiZmU0YmFlYjg2ZDIyYjMxMzZmMjNhYzc1OWE5OWZlIn0sInNpZ25hdHVyZSI6IjB4MTIzZjJmNTU1ZjFhNmIwNTM2MzdlMzY1Mzg3ODc2M2E1ZjYwMTI3ZDA3NTNmMTcyYmRlYjllY2RiYjA2ZTM1YjVkZWQ5N2MzNzliZWJmMjM2NWIxNWNlMTJjMGQ0OTQ3Zjg3N2FkZGFlN2U1MjkwODk5M2E2YWZiODVkMjk1MDAxYyJ9LCJyZXNvdXJjZSI6eyJ1cmwiOiJodHRwOi8vbG9jYWxob3N0OjMwMDEvYXBpL2d3L3BvYy1zZWxsZXIiLCJkZXNjcmlwdGlvbiI6IlBBWSBDMSBzcGlrZSDigJQgdGhyb3dhd2F5IHBhaWQgZW5kcG9pbnQiLCJtaW1lVHlwZSI6IiJ9LCJhY2NlcHRlZCI6eyJzY2hlbWUiOiJleGFjdCIsIm5ldHdvcmsiOiJlaXAxNTU6ODQ1MzIiLCJhbW91bnQiOiIxMDAwMCIsImFzc2V0IjoiMHgwMzZDYkQ1Mzg0MmM1NDI2NjM0ZTc5Mjk1NDFlQzIzMThmM2RDRjdlIiwicGF5VG8iOiIweDJkZTdCOTM4OEMyNDlEMjA4MDBiQTA5N2VENURFYjY2ZTQ0MzdEYzQiLCJtYXhUaW1lb3V0U2Vjb25kcyI6MzAwLCJleHRyYSI6eyJuYW1lIjoiVVNEQyIsInZlcnNpb24iOiIyIn19fQ==";
-
-const CAPTURED_RESPONSE =
-  "eyJzdWNjZXNzIjp0cnVlLCJwYXllciI6IjB4MEQzQ2FDNWYyNzcwNUM0YzcyMTg1QjhCNzRBNTQzRjM1MzBGODRlZiIsInRyYW5zYWN0aW9uIjoiMHgzNjQ2MTI1YzAyNzc1ODU0OTJhYmEwMTM5YzA4YzQzYjRmNjg0OTM2MmQ5M2U0MjQ0Mzk3NzY4ZDU3YTRlZGE5IiwibmV0d29yayI6ImVpcDE1NTo4NDUzMiJ9";
-
-const asHeader = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64");
 
 /** Every field the policy engine judges, as it really arrived. */
 const offer = () => decodePaymentRequired(CAPTURED_REQUIRED).accepts[0];
@@ -85,7 +75,7 @@ describe("encodePaymentSignature", () => {
 describe("decodePaymentResponse", () => {
   it("extracts the tx hash from the real C1 capture", () => {
     const settlement = decodePaymentResponse(CAPTURED_RESPONSE);
-    expect(settlement.txHash).toBe("0x3646125c0277585492aba0139c08c43b4f6849362d93e4244397768d57a4eda9");
+    expect(settlement.txHash).toBe(SETTLED_TX_HASH);
     expect(settlement.settledAt).toBeInstanceOf(Date);
   });
 

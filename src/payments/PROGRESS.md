@@ -3,7 +3,7 @@
 [BUILD.md](./BUILD.md) is the plan. **This file is the record** — what actually got built, what is
 proven, what is still open. Update it at the end of every checkpoint.
 
-Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ · next: **C3**
+Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ · next: **C4**
 
 ---
 
@@ -13,7 +13,7 @@ Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ · next:
 |---|---|---|---|
 | C1 | Real x402 payment settles | 🟢 **green** | tx `0x364612…4eda9` on Base Sepolia, buyer balance $20.00 → $19.99 |
 | C2 | Header codecs | 🟢 **green** | 12 tests pass against the real C1 captures |
-| C3 | SDK adapter + facilitator types | ⚪ not started | |
+| C3 | SDK adapter + facilitator types | 🟢 **green** | 7 adapter tests + a real settlement through the split, tx `0x9e060e…8f15` |
 | C4 | Intent build + hash | ⚪ not started | |
 | C5 | allowToken + signer | ⚪ not started | |
 | C6 | Gateway orchestrator | ⚪ not started | |
@@ -143,6 +143,57 @@ decodePaymentResponse(headerValue: string): SettlementResult
 
 BUILD.md lists three functions; `decodePaymentSignature` is a fourth. The round-trip test cannot
 decode without it, and the test file may not import the SDK directly. C6 needs it anyway.
+
+---
+
+## C3 — SDK adapter
+
+Confine `@x402/*` to one place, and split the flow so the policy decision has somewhere to sit.
+
+### Files
+
+| File | State |
+|---|---|
+| `x402/adapter.ts` | ✅ implemented · read / narrow / sign / read |
+| `x402/facilitator.ts` | ✅ re-exports the SDK's real `VerifyResponse` / `SettleResponse` |
+| `mock/index.ts` | ✅ adapter-shaped fakes, no chain, no RPC, no funded wallet |
+| `scripts/poc-x402.ts` | ✅ rewritten to run through the adapter |
+| `tests/adapter.test.ts` | ✅ 7 tests, no network |
+| `tests/fixtures.ts` | ✅ new · pinned C1 captures shared by both test files |
+
+### Why the split exists
+
+`wrapFetchWithPayment` does 402-detect, sign and retry in one call. It signs before any policy code
+can run, which would delete the product. The adapter separates the halves:
+
+```
+readPaymentRequired(response)   ->  the price, decoded
+        ^  CORE.evaluatePayment goes HERE  ^
+narrowToOffer(required, offer)  ->  binds the SDK to the approved entry (threat T9)
+createPaymentSignature(...)     ->  signs, returns the header value
+readSettlement(response)        ->  the proven tx hash
+```
+
+`narrowToOffer` matters: `createPaymentPayload` runs the SDK's own selector over `accepts[]`. If a
+merchant offers two entries and CORE approved one, the SDK could pick the other. Rebuilding the
+envelope with a single entry removes that choice.
+
+### Proven
+
+| | |
+|---|---|
+| Real settlement through the split | tx `0x9e060efac0a936e152edc386dea42f3162f7dbf0edc1f3a87077941098da8f15` |
+| Balance | $19.99 → **$19.98** |
+| Signing works offline | `adapter.test.ts` signs EIP-3009 typed data with no RPC |
+| `@x402/*` reachable from | `src/payments/x402/**` and the throwaway seller, nothing else |
+
+### Deviations from BUILD.md
+
+| What | Why |
+|---|---|
+| The SDK boundary is the `x402/` **folder**, not `adapter.ts` alone | `headers.ts` is SDK surface too, and making it import from `adapter.ts` would invert the layering. ESLint already scopes the ban to `src/payments/x402/**` |
+| Adapter takes a `Response` instead of doing its own `fetch` | `gateway/forward.ts` owns proxying at C6. Two places issuing requests would duplicate the header-stripping rules |
+| `poc-seller.ts` keeps its ESLint exemption | Sellers use `@x402/next`, which the buyer-side adapter does not wrap. Narrowed from `poc-*.ts` to that one file |
 
 ---
 
