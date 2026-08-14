@@ -3,7 +3,7 @@
 [BUILD.md](./BUILD.md) is the plan. **This file is the record** — what actually got built, what is
 proven, what is still open. Update it at the end of every checkpoint.
 
-Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ · next: **C4**
+Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C4 ☑ · next: **C5**
 
 ---
 
@@ -14,7 +14,7 @@ Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ �
 | C1 | Real x402 payment settles | 🟢 **green** | tx `0x364612…4eda9` on Base Sepolia, buyer balance $20.00 → $19.99 |
 | C2 | Header codecs | 🟢 **green** | 12 tests pass against the real C1 captures |
 | C3 | SDK adapter + facilitator types | 🟢 **green** | 7 adapter tests + a real settlement through the split, tx `0x9e060e…8f15` |
-| C4 | Intent build + hash | ⚪ not started | |
+| C4 | Intent build + hash | 🟢 **green** | 19 tests · hash moves on all 9 judged terms, ignores key order |
 | C5 | allowToken + signer | ⚪ not started | |
 | C6 | Gateway orchestrator | ⚪ not started | |
 | C7 | `POST /api/gw/request` live | ⚪ not started | 🟧 DEMO waits on this |
@@ -197,12 +197,64 @@ envelope with a single entry removes that choice.
 
 ---
 
+## C4 — intent build and hash
+
+`PAYMENT-REQUIRED` becomes the canonical `PaymentIntent`: the object CORE judges and the signer is
+bound to.
+
+### Files
+
+| File | State |
+|---|---|
+| `intent/build.ts` | ✅ implemented |
+| `intent/hash.ts` | ✅ implemented |
+| `tests/intent.test.ts` | ✅ 19 tests |
+
+### Field mapping
+
+| Intent field | Source | Note |
+|---|---|---|
+| `amountMinor` | `BigInt(requirements.amount)` | ⚠️ **not** `toMinor()` — see below |
+| `asset` | `requirements.asset` | the contract address, the only unforgeable identifier |
+| `network` | `requirements.network` | `eip155:84532` as it arrives |
+| `recipient` | `requirements.payTo` | regex-checked |
+| `merchant` | `new URL(requestUrl).host` | host, **with port** — C7's frozen contract shows `localhost:3000` |
+| `resource` | `` `${METHOD} ${pathname}` `` | query string dropped |
+| `nonce` | 16 random bytes | fresh per intent, so two identical requests never share a hash |
+| `state` | `"EVALUATING"` | |
+
+### 🚨 The factor-of-10⁶ trap
+
+BUILD.md says `amountMinor` is `bigint` **via `toMinor`**. That is wrong against the real wire.
+`toMinor` converts a *dollar* string: `toMinor("0.01") === 10000n`. But x402 already sends integer
+minor units, so `toMinor("10000")` returns `10000000000n` — a $10,000 payment where $0.01 was
+quoted. `BigInt(requirements.amount)` is correct, and a test pins it.
+
+C2's decoder already rejects a merchant quoting `"0.01"`, and `build.ts` re-checks because it is
+exported from `index.ts` and is therefore its own trust boundary.
+
+### What the hash covers
+
+Nine terms: `agentId`, `amountMinor`, `asset`, `network`, `recipient`, `merchant`, `resource`,
+`reason`, `nonce`. Hashed as a fixed-order JSON array, so object key order cannot change the result
+and no separator can be forged out of field content.
+
+`intentId` and `createdAt` are excluded — they identify the record, they are not terms of the
+payment. A test asserts changing them does **not** move the hash.
+
+**Deviation:** the stub's comment listed seven fields, omitting `merchant` and `reason`. `merchant`
+is the exact key CORE's allowlist matches on, so leaving it unbound would permit the swap the hash
+exists to prevent. `reason` is the "WHY" dimension CORE can judge. Both are bound.
+
+---
+
 ## Open blockers
 
 | id | What | Owner | Blocks |
 |---|---|---|---|
 | **B1** | DEMO's `/api/sandbox/search` is still `notImplemented`, so PAY runs a throwaway seller. Delete `scripts/poc-seller.ts` + `app/api/gw/poc-seller/` when DEMO ships | DEMO | C7 cleanup |
 | **B3** | Live network id is `eip155:84532`; `src/shared/types.ts` documents `"base-sepolia"`. CORE's `rail.allowedNetworks` will compare the wrong string and deny-by-default blocks every payment. PAY may not edit `shared/types.ts` | CORE | C6, C7 |
+| **B6** | Same shape as B3, for assets. `src/core/db/seed.ts:33` and `src/core/policy/templates.ts:18` seed `allowedAssets: ["USDC"]`; the wire carries the contract address `0x036CbD…F7e`. The intent stores the address, because a symbol is merchant-supplied and forgeable while an address is not. CORE must allowlist addresses, or normalise address → symbol against a known-asset table | CORE | C7 |
 | **B2** | Buyer and seller must pin the **same** `@x402/*` major. PAY is on `2.22.0` (scoped v2 line). The unscoped `x402-fetch@1.2.0` is the old line — do not use | DEMO | C7 |
 | **B5** | Buyer needs test **USDC**, not gas. `exact` is EIP-3009: the buyer signs, the facilitator broadcasts and pays gas | PAY | C1 |
 
