@@ -3,7 +3,7 @@
 [BUILD.md](./BUILD.md) is the plan. **This file is the record** — what actually got built, what is
 proven, what is still open. Update it at the end of every checkpoint.
 
-Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C4 ☑ C5 ☑ · next: **C6**
+Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C4 ☑ C5 ☑ C6 ☑ · next: **C7**
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: **2026-08-15** · Branch: `pay/x402-poc` · C1 ☑ C2 ☑ C3 ☑ C
 | C3 | SDK adapter + facilitator types | 🟢 **green** | 7 adapter tests + a real settlement through the split, tx `0x9e060e…8f15` |
 | C4 | Intent build + hash | 🟢 **green** | 19 tests · hash moves on all 9 judged terms, ignores key order |
 | C5 | allowToken + signer | 🟢 **green** | 10 tests · 3 mutation tests confirm each guard is load-bearing |
-| C6 | Gateway orchestrator | ⚪ not started | |
+| C6 | Gateway orchestrator | 🟢 **green** | 34 tests · mutation-checked · live settlement through the full flow |
 | C7 | `POST /api/gw/request` live | ⚪ not started | 🟧 DEMO waits on this |
 
 Legend: 🟢 green · 🟡 partly done · ⚪ not started · 🔴 blocked
@@ -308,12 +308,70 @@ with more than one lambda, a replay could land on a cold instance and succeed. T
 
 ---
 
+## C6 — gateway orchestrator
+
+The whole flow, on the CORE mock. Once a reservation exists, **every** exit path releases it.
+
+### Files
+
+| File | State |
+|---|---|
+| `gateway/forward.ts` | ✅ proxy + header stripping |
+| `gateway/orchestrator.ts` | ✅ the full flow |
+| `tests/forward.test.ts` | ✅ 19 tests |
+| `tests/orchestrator.test.ts` | ✅ 15 tests |
+
+### Header stripping is prefix-based, not a fixed list
+
+The stub listed exact names. An agent sending `X-Guard-Anything` would have sailed through, and the
+v1 legacy header `X-PAYMENT` was not on the list at all — so an agent could have smuggled its own
+payment using the older name the SDK still accepts. Now `x-guard-`, `payment-` and `x-payment` are
+stripped by prefix, plus `authorization`, `cookie`, `host`, `content-length`, `connection`.
+
+`PAYMENT-SIGNATURE` is set **only** from the orchestrator's own argument, after the signer approved.
+
+### Failure paths, all releasing
+
+| Path | Reason code |
+|---|---|
+| merchant 500 on the paid retry | `UPSTREAM_UNAVAILABLE` |
+| 402 again on the paid retry | `SETTLEMENT_FAILED` |
+| paid 200 with no `PAYMENT-RESPONSE` | `SETTLEMENT_FAILED` |
+| facilitator reports `success: false` | `SETTLEMENT_FAILED` |
+| timeout | `UPSTREAM_UNAVAILABLE` |
+| the signer itself refuses | whatever the signer threw |
+
+BLOCK, HOLD and the caller's own `maxAmountUsd` all return **before** any reservation is made, so
+there is nothing to release and nothing is ever signed.
+
+### Bug the live run caught that the unit tests did not
+
+`readPaymentRequired` returns `null` for any non-402, and the first draft treated `null` as "free
+resource". So a merchant **404 came back as `status: SETTLED, decision: ALLOW`** — a failed call
+reported to the agent as a success. Only a 2xx is a free resource now; anything else is
+`FAILED` / `UPSTREAM_UNAVAILABLE`. Four tests pin it.
+
+### Proven load-bearing
+
+Deleting the single `releaseBudget()` call kills **6** tests.
+
+### Live end-to-end
+
+| Case | Result |
+|---|---|
+| `maxAmountUsd: "0.005"` vs a $0.01 quote | `BLOCKED`, nothing signed |
+| merchant 404 | `FAILED`, `UPSTREAM_UNAVAILABLE` |
+| smuggled `X-Guard-Key` + `Authorization` + `PAYMENT-SIGNATURE` | stripped, settled honestly — tx `0xa9f002…bec2` |
+
+---
+
 ## Open blockers
 
 | id | What | Owner | Blocks |
 |---|---|---|---|
 | **B1** | DEMO's `/api/sandbox/search` is still `notImplemented`, so PAY runs a throwaway seller. Delete `scripts/poc-seller.ts` + `app/api/gw/poc-seller/` when DEMO ships | DEMO | C7 cleanup |
 | **B3** | Live network id is `eip155:84532`; `src/shared/types.ts` documents `"base-sepolia"`. CORE's `rail.allowedNetworks` will compare the wrong string and deny-by-default blocks every payment. PAY may not edit `shared/types.ts` | CORE | C6, C7 |
+| **B7** | 🚨 `src/core/mock/index.ts` and `src/core/index.ts` have **different signatures**, so BUILD.md's promised one-line swap at C7 will not compile. Mock: `evaluatePayment()`, `reserveBudget(intentId, amount)`, `commitBudget()`, `releaseBudget()`. Real: `evaluatePayment({intent, idempotencyKey})`, `reserveBudget(agentId, intentId, amount)`, `commitBudget(reservationId, txHash)`, `releaseBudget(reservationId, reason)`. PAY may not edit `src/core/**`. Either CORE aligns the mock, or C7 adjusts four call sites — see the `TODO(PAY)` in `gateway/orchestrator.ts` | CORE | C7 |
 | **B6** | Same shape as B3, for assets. `src/core/db/seed.ts:33` and `src/core/policy/templates.ts:18` seed `allowedAssets: ["USDC"]`; the wire carries the contract address `0x036CbD…F7e`. The intent stores the address, because a symbol is merchant-supplied and forgeable while an address is not. CORE must allowlist addresses, or normalise address → symbol against a known-asset table | CORE | C7 |
 | **B2** | Buyer and seller must pin the **same** `@x402/*` major. PAY is on `2.22.0` (scoped v2 line). The unscoped `x402-fetch@1.2.0` is the old line — do not use | DEMO | C7 |
 | **B5** | Buyer needs test **USDC**, not gas. `exact` is EIP-3009: the buyer signs, the facilitator broadcasts and pays gas | PAY | C1 |

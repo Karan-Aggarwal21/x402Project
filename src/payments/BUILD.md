@@ -64,7 +64,7 @@ Running record of what was actually built, decided and blocked: **[PROGRESS.md](
 | C3 | SDK adapter + facilitator types | C6 | ☑ |
 | C4 | Intent build + hash | C5 | ☑ |
 | C5 | allowToken + signer | C6 | ☑ |
-| C6 | Gateway orchestrator | C7 | ☐ |
+| C6 | Gateway orchestrator | C7 | ☑ |
 | C7 | `POST /api/gw/request` live | 🟧 **DEMO** | ☐ |
 
 ---
