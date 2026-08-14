@@ -22,8 +22,9 @@ const boundaries = [
   },
   {
     // If the x402 SDK surface differs from the docs, exactly one file changes.
+    // The poc-* spikes are exempt: they exist to discover that surface before the adapter is written.
     files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["src/payments/x402/**"],
+    ignores: ["src/payments/x402/**", "src/payments/scripts/poc-*.ts"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{

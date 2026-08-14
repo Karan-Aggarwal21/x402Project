@@ -3,7 +3,9 @@
 
 function required(name: string): string {
   const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  // .env.example ships "0x..." placeholders. Treat them as unset, so the error names the
+  // variable instead of surfacing as a curve or address error deep inside a library.
+  if (!value || value === "0x...") throw new Error(`Missing required environment variable: ${name}`);
   return value;
 }
 

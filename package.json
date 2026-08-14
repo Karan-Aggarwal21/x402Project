@@ -23,6 +23,9 @@
     "docs:pdf": "node ../Docs/tools/md2pdf.js ../Docs/PRD.md ../Docs/ARCHITECTURE.md ../Docs/API_DOCS.md ../Docs/DEVELOPMENT_PLAN.md ../Docs/REPO_STRUCTURE.md"
   },
   "dependencies": {
+    "@x402/evm": "2.22.0",
+    "@x402/fetch": "2.22.0",
+    "@x402/next": "2.22.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.38.4",
     "lucide-react": "^0.469.0",
