@@ -10,6 +10,10 @@
 | **Critical path** | ⚠️ Owns the submission. Nothing ships without this division. |
 | **Blocked by** | Nobody. The sandbox is standalone x402; the agent talks HTTP only. |
 
+> 👉 **Start here: [BUILD.md](./BUILD.md)** — checkpoints C1–C7, commit messages and the frozen
+> gateway contract you code against without waiting for PAY. This README is the context; that file is
+> the order of work.
+
 ---
 
 ## 1. What this division is about

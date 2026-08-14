@@ -11,6 +11,9 @@
 | **Critical path** | ⚠️ Blocks PAY at P3 and UI at P4. Ship `types.ts` and the seed first. |
 | **Blocked by** | Nobody. |
 
+> 👉 **Start here: [BUILD.md](./BUILD.md)** — checkpoints C1–C8, commit messages and the check that
+> proves each one is done. This README is the context; that file is the order of work.
+
 ---
 
 ## 1. What this division is about

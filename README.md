@@ -40,6 +40,27 @@ x402-Brainwaves Project/          <- outer working folder
 Each `src/<division>/README.md` explains that division in full: mission, files, public API,
 dependencies, day-0 tasks, definition of done.
 
+## Your checklist
+
+Every division has a `BUILD.md` next to its README with numbered checkpoints, the exact commit
+message for each, and a runnable check that proves it is done.
+
+| Owner | Checklist | Checkpoints | Blocks |
+|---|---|---|---|
+| **CORE** | [src/core/BUILD.md](src/core/BUILD.md) | C1–C8 | PAY at C6, UI at C8 |
+| **PAY** | [src/payments/BUILD.md](src/payments/BUILD.md) | C1–C7 | DEMO at C7 |
+| **UI** | [src/dashboard/BUILD.md](src/dashboard/BUILD.md) | C1–C7 | nobody |
+| **DEMO** | [src/demo/BUILD.md](src/demo/BUILD.md) | C1–C7 | PAY at C1 |
+
+Commit messages carry the checkpoint, so one command shows where the whole team stands:
+
+```bash
+git log --all --oneline | grep -oE "\((core|pay|ui|demo)\): C[0-9]+" | sort -u
+```
+
+Nobody is ever blocked while building — every division has a mock of what it needs. Integration is
+a one-line import swap, four times, at the checkpoints marked 🚨.
+
 ## Read before your first commit
 
 1. [../Docs/PRD.md](../Docs/PRD.md) - what we build and why

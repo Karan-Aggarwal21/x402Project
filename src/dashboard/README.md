@@ -10,6 +10,9 @@
 | **Critical path** | ❌ No - but this is what the judges actually look at |
 | **Blocked by** | **Nobody, ever.** MSW mocks + `db/seed.ts` from hour 0. |
 
+> 👉 **Start here: [BUILD.md](./BUILD.md)** — checkpoints C1–C7, commit messages and the one-line
+> swap from mocks to the real API. This README is the context; that file is the order of work.
+
 ---
 
 ## 1. What this division is about

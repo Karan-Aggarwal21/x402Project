@@ -10,6 +10,10 @@
 | **Critical path** | ✅ Yes. Nothing demoable exists until this division works. |
 | **Blocked by** | Nobody. Uses `@/core/mock` on day 0. |
 
+> 👉 **Start here: [BUILD.md](./BUILD.md)** — checkpoints C1–C7, commit messages and the frozen
+> `/api/gw/request` contract DEMO codes against. This README is the context; that file is the order
+> of work.
+
 ---
 
 ## 1. What this division is about
