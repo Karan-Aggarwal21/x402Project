@@ -8,7 +8,7 @@ else: no business logic, no I/O, no framework code.
 | File | What | Editable by |
 |---|---|---|
 | `types.ts` | `PaymentIntent`, `EvaluationResult`, `Decision`, `PolicyRules`, `Reason` | CORE only, after a group ack |
-| `errors.ts` | The 22 error codes from `API_DOCS.md` section 2.5 | append-only |
+| `errors.ts` | The 24 error codes from `API_DOCS.md` section 2.5 | append-only |
 | `money.ts` | `bigint` minor-unit helpers. USDC has 6 decimals. | CORE |
 | `ids.ts` | Prefixed ULIDs: `agt_`, `pol_`, `int_`, `evl_`, ... | CORE |
 | `http.ts` | Tiny JSON response helpers used by every route handler | CORE |

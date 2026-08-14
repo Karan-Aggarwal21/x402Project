@@ -1,11 +1,10 @@
-/**
- * OWNER: PAY
- * WHAT: Typed environment access. Fails fast at boot instead of at the first payment.
- * DOCS: .env.example
- */
+// OWNER: PAY. Typed environment access, read through getters so a missing key fails
+// at first use rather than at import time — importing must never break the build.
 
-function required(_name: string): string {
-  throw new Error("NOT_IMPLEMENTED: env.required");
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
 }
 
 export const env = {

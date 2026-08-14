@@ -115,6 +115,8 @@ export interface PolicyRules {
   merchant: {
     allowedMerchants: string[];
     blockedMerchants: string[];
+    /** domain -> expected payTo. A mismatch is a BLOCK, not a warning (rule 5). */
+    pinnedRecipients: Record<string, string>;
     unknownMerchantAction: UnknownMerchantAction;
     enforceRecipientPinning: boolean;
   };

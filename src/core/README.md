@@ -33,8 +33,9 @@ auditable and the whole security claim collapses.
 
 | Path | What it does |
 |---|---|
-| `db/schema.ts` | 12 tables (`ARCHITECTURE.md` section 10). Money columns are `bigint` minor units. |
-| `db/index.ts` | Drizzle client. |
+| `db/schema.ts` | **5 tables** (`../../../Docs/ARCHITECTURE.md` §10). Money columns are `bigint` minor units. |
+| `db/queries.ts` | ⭐ **The only place outside `budget/ledger.ts` that touches the DB.** Handlers call these, never `getDb()` directly. |
+| `db/index.ts` | Drizzle client, lazy. |
 | `db/seed.ts` | 2 agents, 6 merchants, 3 policies, 40 mixed-decision intents. **UI depends on this from hour 2.** |
 | `db/reset.ts` | Wipes and re-seeds so the demo can be re-run cleanly on stage. |
 | `policy/rules.ts` | ⭐ The 13 precedence rules, each a pure `(ctx) => Reason \| null`. |
@@ -58,6 +59,22 @@ auditable and the whole security claim collapses.
 | `tests/ledger/` | 50 concurrent intents against a $1 budget. |
 
 ---
+
+### Growing the schema
+
+Seven tables a production system would have are folded into the five: `organizations`, `users`,
+`merchants`, `evaluations`, `approvals`, `payments`, `agent_wallets`. That is **deferred
+normalisation, not lost capability** — each is a 30 min to 1.5 h additive migration
+(expand → backfill → switch reads → optionally contract). The full table and the reasoning live in
+`../../../Docs/ARCHITECTURE.md` §10.3.
+
+Three rules keep it cheap:
+
+1. **All DB access goes through `db/queries.ts`** — adding a tenant filter is then one file.
+2. **Identity is stored as text** (`created_by_email`, `approval_reviewer_email`) so a future `users`
+   backfill is a `SELECT DISTINCT`.
+3. **`audit_logs` records every decision**, so the history a single intent row cannot hold is never
+   actually lost.
 
 ## 3. Public API
 
