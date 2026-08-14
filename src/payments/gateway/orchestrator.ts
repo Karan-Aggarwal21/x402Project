@@ -1,7 +1,7 @@
 // OWNER: PAY. The main flow: forward -> 402 -> evaluate -> reserve -> sign -> retry -> settle -> commit.
 // Once a reservation exists, every exit path releases it. A leak silently shrinks the agent's budget.
 import { commitBudget, evaluatePayment, releaseBudget, reserveBudget } from "@/core/mock";
-import { buildIntentFromRequirements } from "@/payments/intent/build";
+import { buildIntentFromRequirements, resolveTarget } from "@/payments/intent/build";
 import { forwardToMerchant } from "@/payments/gateway/forward";
 import { mintAllowToken } from "@/payments/wallet/allowToken";
 import { signPaymentPayload } from "@/payments/wallet/signer";
@@ -28,6 +28,9 @@ export interface GuardedRequestResult {
   intentId: string;
   decision: Decision;
   reasons: Reason[];
+  merchant: string;
+  resource: string;
+  amountUsd: string | null;
   payment?: { amount: string; txHash: `0x${string}`; explorerUrl: string; settledAt: string };
   onChain: { signed: boolean; txHash: string | null };
   response?: { status: number; headers: Record<string, string>; body: unknown };
@@ -68,6 +71,8 @@ async function describe(response: Response): Promise<GuardedRequestResult["respo
 export async function runGuardedRequest(input: GuardedRequestInput): Promise<GuardedRequestResult> {
   const { agentId, url, method, headers, body, maxAmountUsd, reason: why } = input;
 
+  const target = resolveTarget(url, method);
+
   const unpaid = await forwardToMerchant({ url, method, headers, body });
   const paymentRequired = readPaymentRequired(unpaid);
 
@@ -78,6 +83,8 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     return {
       status: free ? "SETTLED" : "FAILED",
       intentId: newId("intent"),
+      ...target,
+      amountUsd: null,
       decision: "ALLOW",
       reasons: [free
         ? reason("NO_PAYMENT_REQUIRED", "The merchant served this resource without charging.")
@@ -101,6 +108,8 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     return {
       status: "BLOCKED",
       intentId: intent.intentId,
+      ...target,
+      amountUsd: toUsd(intent.amountMinor),
       decision: "BLOCK",
       reasons: [reason(
         "PER_TRANSACTION_LIMIT_EXCEEDED",
@@ -116,6 +125,8 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     return {
       status: evaluation.decision === "HOLD" ? "PENDING_APPROVAL" : "BLOCKED",
       intentId: intent.intentId,
+      ...target,
+      amountUsd: toUsd(intent.amountMinor),
       decision: evaluation.decision,
       reasons: evaluation.reasons,
       onChain: UNSIGNED,
@@ -143,6 +154,8 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     return {
       status: "SETTLED",
       intentId: intent.intentId,
+      ...target,
+      amountUsd: toUsd(intent.amountMinor),
       decision: "ALLOW",
       reasons: evaluation.reasons,
       payment: {
@@ -160,6 +173,8 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     return {
       status: "FAILED",
       intentId: intent.intentId,
+      ...target,
+      amountUsd: toUsd(intent.amountMinor),
       decision: "ALLOW",
       reasons: [failureReason(error)],
       onChain: UNSIGNED,

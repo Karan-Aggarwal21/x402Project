@@ -22,6 +22,15 @@ function check(condition: boolean, message: string): void {
   if (!condition) throw new PaymentHeaderError("INVALID_PAYMENT_REQUIREMENTS", message);
 }
 
+/**
+ * The two request-derived terms, resolved in one place so the gateway and the intent can never
+ * disagree about which merchant was judged. `host` keeps the port: it is part of the allowlist key.
+ */
+export function resolveTarget(requestUrl: string, method: string): { merchant: string; resource: string } {
+  const url = new URL(requestUrl);
+  return { merchant: url.host, resource: `${method.toUpperCase()} ${url.pathname}` };
+}
+
 export function buildIntentFromRequirements(input: BuildIntentInput): PaymentIntent {
   const { agentId, requirements, requestUrl, method, reason } = input;
 
@@ -29,7 +38,6 @@ export function buildIntentFromRequirements(input: BuildIntentInput): PaymentInt
   check(MINOR_UNITS.test(requirements.amount), `Amount must be integer minor units, got ${JSON.stringify(requirements.amount)}.`);
   check(ADDRESS.test(requirements.payTo), `payTo is not an address: ${JSON.stringify(requirements.payTo)}.`);
 
-  const url = new URL(requestUrl);
   const terms = {
     intentId: newId("intent"),
     agentId,
@@ -38,9 +46,7 @@ export function buildIntentFromRequirements(input: BuildIntentInput): PaymentInt
     asset: requirements.asset,
     network: requirements.network,
     recipient: requirements.payTo as `0x${string}`,
-    // host, not hostname: the port belongs to the allowlist key. See C7's frozen contract.
-    merchant: url.host,
-    resource: `${method.toUpperCase()} ${url.pathname}`,
+    ...resolveTarget(requestUrl, method),
     reason,
     nonce: randomBytes(16).toString("hex"),
     createdAt: new Date(),
