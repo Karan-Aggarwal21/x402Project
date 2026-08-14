@@ -46,6 +46,14 @@ const boundaries = [
     },
   },
   {
+    // Every routing file is a re-export. A long file here means logic escaped its division.
+    files: ["app/**/route.ts", "app/**/page.tsx", "app/**/layout.tsx"],
+    ignores: ["app/layout.tsx"],
+    rules: {
+      "max-lines": ["error", { max: 12, skipBlankLines: false, skipComments: false }],
+    },
+  },
+  {
     // Payments consumes the decision, never the rules that produced it.
     files: ["src/payments/**"],
     rules: {
