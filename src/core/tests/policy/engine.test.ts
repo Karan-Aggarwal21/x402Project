@@ -160,21 +160,26 @@ describe("policy engine", () => {
   });
 
   it("12 HOLDs when the amount sits in holdBetweenUsd", () => {
-    // The band is only reachable when the per-transaction cap is above it.
-    const rules = makePolicyRules({
-      financial: { ...makePolicyRules().financial, maxPerTransactionUsd: "1.00" },
-    });
-    const ctx = makeContext({
-      intent: makeIntent({ amountMinor: toMinor("0.45") }),
-      policy: makePolicy({ rules }),
-    });
-    const result = evaluate(ctx);
+    const result = evaluate(makeContext({ intent: makeIntent({ amountMinor: toMinor("0.45") }) }));
     expect(result.decision).toBe("HOLD");
     expect(result.reasons.map((reason) => reason.code)).toContain("APPROVAL_REQUIRED");
     expect(result.reasons.some((reason) => reason.rule === "risk.holdBetweenUsd")).toBe(true);
     expect(result.reasons.find((reason) => reason.rule === "risk.holdBetweenUsd")?.message).toBe(
       "$0.45 falls in the $0.10-$1.00 review band.",
     );
+  });
+
+  it("12a keeps the whole review band reachable under the default policy", () => {
+    // Regression guard. A maxPerTransactionUsd below holdBetweenUsd[1] makes rule 6 shadow the
+    // entire band, so no payment can ever reach human review and the approvals queue stays empty.
+    // That shipped in the first seed; this assertion is what stops it coming back.
+    const { financial, risk } = makePolicyRules();
+    expect(toMinor(financial.maxPerTransactionUsd)).toBeGreaterThanOrEqual(toMinor(risk.holdBetweenUsd[1]));
+
+    for (const usd of ["0.10", "0.45", "0.80", "1.00"]) {
+      const result = evaluate(makeContext({ intent: makeIntent({ amountMinor: toMinor(usd) }) }));
+      expect(result.decision, `$${usd} must reach human review`).toBe("HOLD");
+    }
   });
 
   it("12b HOLDs an unknown merchant when unknownMerchantAction=HOLD", () => {

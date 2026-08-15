@@ -121,17 +121,17 @@ describe("policy rules", () => {
     const reason = rulePerTransactionLimit(ctx);
     expect(reason?.code).toBe("PER_TRANSACTION_LIMIT_EXCEEDED");
     expect(reason?.message).toBe(
-      "Transaction amount $2.00 exceeds the per-transaction limit of $0.10.",
+      "Transaction amount $2.00 exceeds the per-transaction limit of $1.00.",
     );
     expect(reason?.observed).toBe("2.00");
-    expect(reason?.expected).toBe("0.10");
+    expect(reason?.expected).toBe("1.00");
   });
 
   it("6b allows an amount exactly at maxPerTransactionUsd", () => {
-    const ctx = makeContext({ intent: makeIntent({ amountMinor: toMinor("0.10") }) });
+    const ctx = makeContext({ intent: makeIntent({ amountMinor: toMinor("1.00") }) });
     expect(rulePerTransactionLimit(ctx)).toBeNull();
     // One minor unit over is the other side of the boundary.
-    const over = makeContext({ intent: makeIntent({ amountMinor: toMinor("0.10") + 1n }) });
+    const over = makeContext({ intent: makeIntent({ amountMinor: toMinor("1.00") + 1n }) });
     expect(rulePerTransactionLimit(over)?.code).toBe("PER_TRANSACTION_LIMIT_EXCEEDED");
   });
 

@@ -25,17 +25,7 @@ const SCENARIOS = [
       counters: makeCounters({ daySpentMinor: toMinor("4.95") }),
     }),
   },
-  {
-    label: "HOLD   amount in review band",
-    ctx: makeContext({
-      intent: makeIntent({ amountMinor: toMinor("0.45") }),
-      policy: makePolicy({
-        rules: makePolicyRules({
-          financial: { ...makePolicyRules().financial, maxPerTransactionUsd: "1.00" },
-        }),
-      }),
-    }),
-  },
+  { label: "HOLD   amount in review band", ctx: makeContext({ intent: makeIntent({ amountMinor: toMinor("0.45") }) }) },
   {
     label: "BLOCK  risk over threshold",
     ctx: makeContext({ merchantKnown: false, counters: makeCounters({ blockedAttemptsLast5Min: 2 }) }),

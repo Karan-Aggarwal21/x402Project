@@ -17,7 +17,7 @@ export const NOW = new Date("2026-08-13T09:30:00.000Z");
 export function makePolicyRules(overrides: Partial<PolicyRules> = {}): PolicyRules {
   return {
     financial: {
-      maxPerTransactionUsd: "0.10",
+      maxPerTransactionUsd: "1.00",
       hourlyBudgetUsd: "1.00",
       dailyBudgetUsd: "5.00",
       monthlyBudgetUsd: "50.00",

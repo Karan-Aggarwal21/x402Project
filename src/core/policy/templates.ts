@@ -6,7 +6,9 @@
 import type { PolicyRules } from "@/shared/types";
 
 export const CONSERVATIVE: PolicyRules = {
-  financial: { maxPerTransactionUsd: "0.10", hourlyBudgetUsd: "1.00", dailyBudgetUsd: "5.00", monthlyBudgetUsd: "50.00" },
+  // maxPerTransactionUsd must clear the top of holdBetweenUsd. Set it below the band and rule 6
+  // blocks every amount the band exists to send for review, leaving approvals unreachable.
+  financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "1.00", dailyBudgetUsd: "5.00", monthlyBudgetUsd: "50.00" },
   merchant: {
     allowedMerchants: [],
     blockedMerchants: [],
