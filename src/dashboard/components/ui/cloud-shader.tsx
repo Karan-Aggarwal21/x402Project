@@ -242,13 +242,11 @@ export const CloudShader = ({
     skyBottomColor,
   });
 
-  paramsRef.current = {
-    speed,
-    count,
-    cloudColor,
-    skyTopColor,
-    skyBottomColor,
-  };
+  // Written in an effect, not during render: the render pass must stay free of side effects, and
+  // the WebGL loop only reads this ref on its next frame anyway.
+  useEffect(() => {
+    paramsRef.current = { speed, count, cloudColor, skyTopColor, skyBottomColor };
+  }, [speed, count, cloudColor, skyTopColor, skyBottomColor]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

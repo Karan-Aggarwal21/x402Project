@@ -73,7 +73,7 @@ export function SpendArea({
               tick={{ fontSize: 11, fill: "#71717a" }}
             />
             <Tooltip
-              formatter={(val: any) => [`$${Number(val).toFixed(2)}`, "Cumulative Spend"]}
+              formatter={(val: number | string) => [`$${Number(val).toFixed(2)}`, "Cumulative Spend"]}
               labelFormatter={(label) => `Time: ${label}`}
               contentStyle={{
                 backgroundColor: "#18181b",

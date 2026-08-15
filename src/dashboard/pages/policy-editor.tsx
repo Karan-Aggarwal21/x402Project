@@ -20,12 +20,10 @@ export function PolicyEditorPage() {
   const [activePolicy, setActivePolicy] = useState<Policy | null>(null);
   const [versions, setVersions] = useState<Policy[]>([]);
   const [activeTab, setActiveTab] = useState<"form" | "json" | "history">("form");
-  const [loading, setLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState<number>(3);
 
   const loadPolicy = async () => {
     try {
-      setLoading(true);
       // This endpoint nests the policy under `policy`. Assigning the envelope leaves rules
       // undefined and the form silently shows its own defaults instead of the live policy.
       const [current, vers] = await Promise.all([
@@ -39,13 +37,13 @@ export function PolicyEditorPage() {
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPolicy();
+    void (async () => {
+      await loadPolicy();
+    })();
   }, [agentId]);
 
   const targetVersionPolicy = versions.find((v) => v.version === selectedVersion) || activePolicy;

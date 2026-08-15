@@ -104,9 +104,12 @@ export const handlers = [
 
   // 7. Create/Update policy version (with server validation)
   http.post("*/api/v1/policies", async ({ request }) => {
-    const body = (await request.json()) as any;
-    const maxPerTx = parseFloat(body?.rules?.financial?.maxPerTransactionUsd);
-    const hourly = parseFloat(body?.rules?.financial?.hourlyBudgetUsd);
+    const body = (await request.json()) as {
+      agentId?: string;
+      rules?: { financial?: Partial<Record<string, string>> };
+    };
+    const maxPerTx = parseFloat(body?.rules?.financial?.maxPerTransactionUsd ?? "");
+    const hourly = parseFloat(body?.rules?.financial?.hourlyBudgetUsd ?? "");
 
     if (maxPerTx > hourly) {
       return HttpResponse.json(
@@ -221,10 +224,10 @@ export const handlers = [
 
   // 11. Simulator run endpoint
   http.post("*/api/v1/simulator/run", async ({ request }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as { scenario?: string };
     const scenario = body?.scenario || "D1";
 
-    const results: Record<string, any> = {
+    const results: Record<string, unknown> = {
       D1: {
         scenario: "D1",
         decision: "ALLOW",
