@@ -34,27 +34,32 @@ export async function callPaidTool(
   name: ToolName,
   body: unknown,
   onCall?: (record: ToolCallRecord) => void,
+  scenario?: string,
 ): Promise<unknown | ToolBlocked> {
-  const url = TOOL_ENDPOINTS[name];
+  const endpoint = TOOL_ENDPOINTS[name];
+  // Only search reads the scenario param — that is how D6's poisoned result gets served.
+  const url = name === "search" && scenario
+    ? `${endpoint}?scenario=${encodeURIComponent(scenario)}`
+    : endpoint;
   const result = await guardedFetch(url, body, `agent tool call: ${name}`);
 
   if (!result.ok) {
     const code = result.blocked?.code ?? "UNKNOWN";
-    onCall?.({ tool: name, priceUsd: PRICING[url], status: "BLOCKED", code });
+    onCall?.({ tool: name, priceUsd: PRICING[endpoint], status: "BLOCKED", code });
     return { blocked: true, code, message: result.blocked?.message ?? "blocked" };
   }
 
-  onCall?.({ tool: name, priceUsd: PRICING[url], status: "PAID", txHash: result.txHash });
+  onCall?.({ tool: name, priceUsd: PRICING[endpoint], status: "PAID", txHash: result.txHash });
   return result.data;
 }
 
 /** Descriptions carry the price on purpose: cost-aware tool choice is the demo's UX layer. */
-export function buildTools(onCall?: (record: ToolCallRecord) => void) {
+export function buildTools(onCall?: (record: ToolCallRecord) => void, scenario?: string) {
   return {
     search: tool({
       description: "Search the web. Costs $0.02 per call.",
       inputSchema: z.object({ query: z.string().describe("the search query") }),
-      execute: (input) => callPaidTool("search", input, onCall),
+      execute: (input) => callPaidTool("search", input, onCall, scenario),
     }),
     extract: tool({
       description: "Extract the text of a document. Costs $0.03 per call.",
