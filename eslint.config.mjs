@@ -22,9 +22,9 @@ const boundaries = [
   },
   {
     // If the x402 SDK surface differs from the docs, exactly one file changes.
-    // The throwaway seller is exempt: sellers use @x402/next, which the buyer-side adapter does not wrap.
+    // Sellers are exempt: sellers use @x402/next, which the buyer-side adapter does not wrap.
     files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["src/payments/x402/**", "src/payments/scripts/poc-seller.ts"],
+    ignores: ["src/payments/x402/**", "src/payments/scripts/poc-seller.ts", "src/demo/sandbox/**"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{
