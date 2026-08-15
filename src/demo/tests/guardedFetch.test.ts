@@ -83,7 +83,7 @@ describe("guardedFetch", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(envelope(202, {
       status: false, statusCode: 202,
       message: "Payment is awaiting human review.",
-      error: { code: "APPROVAL_REQUIRED", details: { intentId: "intent_9" } },
+      error: { code: "APPROVAL_REQUIRED", details: { intentId: "intent_9", expiresAt: "2026-08-15T09:15:00Z" } },
     })));
 
     const result = await guardedFetch("/api/sandbox/summarize", {}, "summarise");
@@ -91,6 +91,7 @@ describe("guardedFetch", () => {
     expect(result).toEqual({
       ok: false,
       blocked: { code: "APPROVAL_REQUIRED", message: "Payment is awaiting human review." },
+      approval: { intentId: "intent_9", expiresAt: "2026-08-15T09:15:00Z" },
     });
   });
 

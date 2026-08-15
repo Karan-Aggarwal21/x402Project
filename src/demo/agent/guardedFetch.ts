@@ -8,11 +8,15 @@ export interface GuardedResult {
   blocked?: { code: string; message: string };
   data?: unknown;
   txHash?: string;
+  /** Present on a 202 APPROVAL_REQUIRED — D7 uses the intentId to find and approve the hold. */
+  approval?: { intentId?: string; expiresAt?: string };
 }
 
 export interface GuardedOptions {
   // The caller's own ceiling, enforced by the gateway before policy is even asked (D2).
   maxAmountUsd?: string;
+  // Ties a post-approval retry to the held intent (D7).
+  idempotencyKey?: string;
 }
 
 const GUARD_KEY = "gk_live_researchbot_demo";
@@ -29,7 +33,13 @@ const successEnvelope = z.object({
 const failureEnvelope = z.object({
   status: z.literal(false),
   message: z.string(),
-  error: z.object({ code: z.string() }).passthrough(),
+  error: z.object({
+    code: z.string(),
+    details: z.object({
+      intentId: z.string().optional(),
+      expiresAt: z.string().optional(),
+    }).passthrough().optional(),
+  }).passthrough(),
 });
 
 function blockedResult(code: string, message: string): GuardedResult {
@@ -55,6 +65,7 @@ export async function guardedFetch(
         body,
         reason,
         ...(options?.maxAmountUsd ? { maxAmountUsd: options.maxAmountUsd } : {}),
+        ...(options?.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : {}),
       }),
     });
   } catch (error) {
@@ -72,7 +83,14 @@ export async function guardedFetch(
   }
 
   const parsed = failureEnvelope.safeParse(json);
-  return parsed.success
-    ? blockedResult(parsed.data.error.code, parsed.data.message)
-    : blockedResult("GUARD_UNAVAILABLE", `Guard returned ${response.status} without a readable envelope.`);
+  if (!parsed.success) {
+    return blockedResult("GUARD_UNAVAILABLE", `Guard returned ${response.status} without a readable envelope.`);
+  }
+  const { code } = parsed.data.error;
+  const details = parsed.data.error.details;
+  const result = blockedResult(code, parsed.data.message);
+  if (code === "APPROVAL_REQUIRED" && details?.intentId) {
+    result.approval = { intentId: details.intentId, expiresAt: details.expiresAt };
+  }
+  return result;
 }

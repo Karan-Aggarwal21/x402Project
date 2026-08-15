@@ -12,3 +12,8 @@ export const PRICING = {
 
 export type SandboxRoute = keyof typeof PRICING;
 
+// D7 needs a quote inside the seed's hold band ($0.10-$1.00); none of the six frozen prices is.
+// The seed itself shows premium-report selling at $0.45/$0.80, so editions match the narrative.
+// The default price stays $2.00 — D2 and D6 never send `edition`.
+export const PREMIUM_REPORT_EDITIONS = { analyst: "0.50" } as const;
+

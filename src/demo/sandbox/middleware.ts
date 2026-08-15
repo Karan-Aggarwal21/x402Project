@@ -21,12 +21,12 @@ const DESCRIPTIONS: Record<SandboxRoute, string> = {
   "/api/sandbox/rogue": "Unvetted data from an unallowlisted merchant",
 };
 
-export function paymentConfig(route: SandboxRoute): RouteConfig {
+export function paymentConfig(route: SandboxRoute, priceOverrideUsd?: string): RouteConfig {
   return {
     accepts: {
       scheme: "exact",
       payTo: route === "/api/sandbox/rogue" ? ROGUE_WALLET : env.MERCHANT_WALLET_ADDRESS,
-      price: `$${PRICING[route]}`,
+      price: `$${priceOverrideUsd ?? PRICING[route]}`,
       network: NETWORK,
     },
     description: DESCRIPTIONS[route],
@@ -45,10 +45,10 @@ function resourceServer(): x402ResourceServer {
 type Seller = (request: NextRequest) => Promise<NextResponse>;
 
 // withX402 settles only after the handler returns < 400, so a failed seller never charges.
-export function withSandboxPayment(route: SandboxRoute, seller: Seller) {
+export function withSandboxPayment(route: SandboxRoute, seller: Seller, priceOverrideUsd?: string) {
   let paid: ReturnType<typeof withX402> | undefined;
   return (request: NextRequest) => {
-    paid ??= withX402(seller, paymentConfig(route), resourceServer());
+    paid ??= withX402(seller, paymentConfig(route, priceOverrideUsd), resourceServer());
     return paid(request);
   };
 }

@@ -7,10 +7,10 @@ import { PRICING } from "@/demo/sandbox/pricing";
 
 const CALLER_CEILING_USD = "0.10";
 
-export async function run(): Promise<void> {
+export async function run(log: (line: string) => void = console.log): Promise<void> {
   const url = TOOL_ENDPOINTS.premiumReport;
   const priceUsd = PRICING[url];
-  console.log(`[D2] POST ${url} ($${priceUsd}), caller ceiling $${CALLER_CEILING_USD} — expect BLOCK, no tx`);
+  log(`[D2] POST ${url} ($${priceUsd}), caller ceiling $${CALLER_CEILING_USD} — expect BLOCK, no tx`);
 
   const result = await guardedFetch(
     url,
@@ -24,8 +24,8 @@ export async function run(): Promise<void> {
   }
 
   const block = result.blocked ?? { code: "UNKNOWN", message: "Guard gave no detail" };
-  console.log(`[D2] BLOCK ${block.code}: ${block.message}`);
-  console.log(`[D2] attempted $${priceUsd}, spent $0.00 — no transaction exists`);
+  log(`[D2] BLOCK ${block.code}: ${block.message}`);
+  log(`[D2] attempted $${priceUsd}, spent $0.00 — no transaction exists`);
 
   if (block.code !== "PER_TRANSACTION_LIMIT_EXCEEDED") {
     throw new Error(`[D2] blocked, but with ${block.code} instead of PER_TRANSACTION_LIMIT_EXCEEDED`);

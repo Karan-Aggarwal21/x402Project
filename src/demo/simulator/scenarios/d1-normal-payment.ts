@@ -5,10 +5,10 @@ import { PRICING } from "@/demo/sandbox/pricing";
 
 const EXPLORER = "https://sepolia.basescan.org/tx/";
 
-export async function run(): Promise<void> {
+export async function run(log: (line: string) => void = console.log): Promise<void> {
   const url = TOOL_ENDPOINTS.search;
   const priceUsd = PRICING[url];
-  console.log(`[D1] POST ${url} ($${priceUsd}) — expect ALLOW + tx hash`);
+  log(`[D1] POST ${url} ($${priceUsd}) — expect ALLOW + tx hash`);
 
   const result = await guardedFetch(url, { query: "x402 adoption data 2026" }, "D1: search for x402 adoption data");
 
@@ -20,8 +20,8 @@ export async function run(): Promise<void> {
   }
 
   const data = result.data as { results?: unknown[] } | undefined;
-  console.log(`[D1] ALLOW — received ${data?.results?.length ?? 0} search results`);
-  console.log(`[D1] txHash: ${result.txHash}`);
-  console.log(`[D1] proof: ${EXPLORER}${result.txHash}`);
-  console.log(`[D1] attempted $${priceUsd}, spent $${priceUsd}`);
+  log(`[D1] ALLOW — received ${data?.results?.length ?? 0} search results`);
+  log(`[D1] txHash: ${result.txHash}`);
+  log(`[D1] proof: ${EXPLORER}${result.txHash}`);
+  log(`[D1] attempted $${priceUsd}, spent $${priceUsd}`);
 }

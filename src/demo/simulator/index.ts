@@ -22,7 +22,9 @@ export const SCENARIOS = [
 
 export type ScenarioName = (typeof SCENARIOS)[number];
 
-const RUNNERS: Record<ScenarioName, () => Promise<void>> = {
+export type ScenarioLog = (line: string) => void;
+
+const RUNNERS: Record<ScenarioName, (log?: ScenarioLog) => Promise<void>> = {
   D1_NORMAL_PAYMENT: d1,
   D2_OVER_LIMIT: d2,
   D3_VELOCITY_LOOP: d3,
@@ -32,8 +34,8 @@ const RUNNERS: Record<ScenarioName, () => Promise<void>> = {
   D7_HUMAN_ESCALATION: d7,
 };
 
-export async function runScenario(name: ScenarioName): Promise<void> {
-  await RUNNERS[name]();
+export async function runScenario(name: ScenarioName, log: ScenarioLog = console.log): Promise<void> {
+  await RUNNERS[name](log);
 }
 
 function resolveName(input: string | undefined): ScenarioName | undefined {
