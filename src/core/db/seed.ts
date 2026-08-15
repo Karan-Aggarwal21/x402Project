@@ -177,7 +177,7 @@ async function main() {
     const reservationId = newId("reservation");
     for (const entryType of ["RESERVE", "COMMIT"] as const) {
       ledger.push({
-        id: newId("reservation"), agentId: researchBotId, intentId, reservationId,
+        id: newId("ledger"), agentId: researchBotId, intentId, reservationId,
         entryType, amountMinor, ...windowKeys(at), createdAt: at,
       });
     }

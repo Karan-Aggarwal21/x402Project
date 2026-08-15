@@ -34,6 +34,9 @@ export const ERROR_CODES = {
   RATE_LIMITED: { http: 429, message: "Rate limit exceeded." },
   GUARD_UNAVAILABLE: { http: 503, message: "Guard dependency unavailable; failing closed." },
   NOT_IMPLEMENTED: { http: 501, message: "Not implemented yet." },
+
+  // --- appended by PAY at C5 ---
+  ALLOW_TOKEN_INVALID: { http: 403, message: "Signing authorisation is missing, expired, replayed or does not match the approved intent." },
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

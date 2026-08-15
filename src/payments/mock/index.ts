@@ -1,20 +1,16 @@
-/**
- * OWNER: PAY
- * WHAT: Fake signer + fake facilitator so CORE, UI and DEMO can run the whole flow with no chain,
- *       no RPC and no funded wallet. Enabled by USE_MOCKS=1.
- * DOCS: REPO_STRUCTURE.md - "the mock rule"
- */
+// OWNER: PAY. Fake signer + facilitator, so CORE, UI and DEMO can run the whole flow with no
+// chain, no RPC and no funded wallet. Mirrors the adapter surface, enabled by USE_MOCKS=1.
+import type { PaymentRequired } from "@/payments/x402/adapter";
 import type { SettlementResult } from "@/shared/types";
 
-export async function mockSign(): Promise<string> {
-  return "mock-payment-signature";
+/** Obviously fake, but still a well-formed 32-byte hash so validation behaves as in production. */
+export const MOCK_TX_HASH = `0x${"deadbeef".repeat(8)}` as `0x${string}`;
+
+export async function createPaymentSignature(paymentRequired: PaymentRequired): Promise<string> {
+  const payload = { x402Version: paymentRequired.x402Version, payload: { mock: true } };
+  return Buffer.from(JSON.stringify(payload)).toString("base64");
 }
 
-export async function mockSettle(): Promise<SettlementResult> {
-  return {
-    txHash: "0xmock0000000000000000000000000000000000000000000000000000000000",
-    settledAt: new Date(),
-    raw: { mock: true },
-  };
+export function readSettlement(_response?: Response): SettlementResult {
+  return { txHash: MOCK_TX_HASH, settledAt: new Date(), raw: { mock: true } };
 }
-

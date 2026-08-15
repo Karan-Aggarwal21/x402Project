@@ -1,12 +1,5 @@
-/**
- * OWNER: PAY
- * WHAT: Types for the facilitator contract we CONSUME. We never implement /verify or /settle.
- * DOCS: API_DOCS.md section 7
- */
+// OWNER: PAY. The facilitator contract we CONSUME. We never implement /verify or /settle.
+// The real calls happen inside the seller's @x402/next middleware, never in our process.
+export type { SettleResponse, VerifyResponse } from "@x402/core/types";
 
-export interface VerifyResponse { isValid: boolean; invalidReason?: string }
-export interface SettleResponse { success: boolean; transaction: `0x${string}`; network: string }
-
-/** Only used by tests and by the sandbox seller. The real calls happen inside @x402/next. */
-export const FACILITATOR_ROUTES = { verify: "/verify", settle: "/settle" } as const;
-
+export const FACILITATOR_ROUTES = { verify: "/verify", settle: "/settle", supported: "/supported" } as const;
