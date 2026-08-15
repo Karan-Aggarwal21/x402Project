@@ -8,7 +8,7 @@ import { API } from "@/dashboard/api-client/endpoints";
 import { DecisionBadge } from "@/dashboard/components/decision-badge";
 import { ReasonChip } from "@/dashboard/components/reason-chip";
 import { TxTimeline } from "@/dashboard/components/tx-timeline";
-import type { LiveDecisionItem } from "@/dashboard/hooks/useLiveDecisions";
+import { toFeedItem, type LiveDecisionItem, type TransactionRow } from "@/dashboard/hooks/useLiveDecisions";
 import {
   ArrowLeft,
   ExternalLink,
@@ -42,8 +42,10 @@ export function TransactionDetailPage() {
       if (!intentId) return;
       try {
         setLoading(true);
-        const data = await apiGet<LiveDecisionItem>(API.transaction(intentId));
-        setTransaction(data);
+        // This endpoint returns { transaction, ledger, audit } — assigning the envelope itself
+        // leaves every field undefined and the page renders its placeholder markup instead.
+        const data = await apiGet<{ transaction: TransactionRow }>(API.transaction(intentId));
+        setTransaction(toFeedItem(data.transaction));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Transaction not found");
       } finally {

@@ -38,9 +38,27 @@ export interface LiveDecisionItem {
   settledAt?: string;
 }
 
+/** CORE groups these; the feed reads them flat. See toIntentDto in src/core/handlers/serialize.ts. */
+export type TransactionRow = LiveDecisionItem & {
+  settlement?: { txHash: string | null; explorerUrl: string | null; settledAt: string | null };
+  approval?: { status: string | null; expiresAt: string | null };
+};
+
 interface TransactionsApiResponse {
-  transactions: LiveDecisionItem[];
+  transactions: TransactionRow[];
   total: number;
+}
+
+// Normalised at the one place rows enter, so every consumer of the hook sees one shape. Without
+// this a settled payment renders with no BaseScan link — the proof the whole demo rests on.
+export function toFeedItem(row: TransactionRow): LiveDecisionItem {
+  return {
+    ...row,
+    txHash: row.settlement?.txHash ?? row.txHash ?? null,
+    settledAt: row.settlement?.settledAt ?? row.settledAt ?? undefined,
+    approvalStatus: row.approval?.status ?? row.approvalStatus ?? undefined,
+    approvalExpiresAt: row.approval?.expiresAt ?? row.approvalExpiresAt ?? undefined,
+  };
 }
 
 export function useLiveDecisions(agentId?: string) {
@@ -58,7 +76,7 @@ export function useLiveDecisions(agentId?: string) {
         const path = agentId ? `${API.transactions}?agentId=${agentId}` : API.transactions;
         const res = await apiGet<TransactionsApiResponse>(path);
         if (isMounted && res?.transactions) {
-          setDecisions(res.transactions);
+          setDecisions(res.transactions.map(toFeedItem));
         }
       } catch (err) {
         console.warn("[useLiveDecisions] Failed to load initial decisions:", err);

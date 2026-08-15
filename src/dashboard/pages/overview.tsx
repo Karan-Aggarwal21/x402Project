@@ -17,13 +17,13 @@ import {
 } from "lucide-react";
 
 interface MetricsSummary {
-  window: string;
+  windowHours: number;
   decisions: {
     allow: number;
     hold: number;
     block: number;
   };
-  spendUsd: string;
+  spentUsd: string;
   blockedUsd: string;
   onChainTxCount: number;
   blockedOnChainTxCount: number;
@@ -96,7 +96,7 @@ export function OverviewPage() {
           Enforcement Overview
         </h2>
         <p className="text-sm text-zinc-500 mt-1">
-          Real-time policy guard decisions and on-chain prevention metrics for the last {metrics.window}.
+          Real-time policy guard decisions and on-chain prevention metrics for the last {metrics.windowHours}h.
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export function OverviewPage() {
           </div>
           <div className="mt-4">
             <div className="text-3xl font-extrabold text-zinc-900 tracking-tight font-mono">
-              ${metrics.spendUsd}
+              ${metrics.spentUsd}
             </div>
             <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
               <span className="text-emerald-600 font-medium">

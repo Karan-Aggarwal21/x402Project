@@ -26,14 +26,16 @@ export function PolicyEditorPage() {
   const loadPolicy = async () => {
     try {
       setLoading(true);
+      // This endpoint nests the policy under `policy`. Assigning the envelope leaves rules
+      // undefined and the form silently shows its own defaults instead of the live policy.
       const [current, vers] = await Promise.all([
-        apiGet<Policy>(API.policy(agentId)),
+        apiGet<{ policy: Policy }>(API.policy(agentId)),
         apiGet<PolicyVersionsResponse>(API.policyVersions(agentId)),
       ]);
-      if (current) setActivePolicy(current);
+      if (current?.policy) setActivePolicy(current.policy);
       if (vers?.versions) {
         setVersions(vers.versions);
-        setSelectedVersion(current?.version || 3);
+        setSelectedVersion(current?.policy?.version ?? 1);
       }
     } catch (err) {
       console.error(err);
@@ -95,6 +97,9 @@ export function PolicyEditorPage() {
       {/* Main Content */}
       {activeTab === "form" && (
         <PolicyForm
+          // initialRules only seeds the form's state on mount, and it arrives after the fetch.
+          // Keying on the loaded version remounts the form once the real policy lands.
+          key={activePolicy?.policyId ?? "loading"}
           agentId={agentId}
           initialRules={activePolicy?.rules}
           onVersionCreated={loadPolicy}

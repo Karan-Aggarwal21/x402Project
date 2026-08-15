@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiGet } from "@/dashboard/api-client/client";
 import { API } from "@/dashboard/api-client/endpoints";
 import { TxTable } from "@/dashboard/components/tx-table";
-import type { LiveDecisionItem } from "@/dashboard/hooks/useLiveDecisions";
+import { toFeedItem, type LiveDecisionItem, type TransactionRow } from "@/dashboard/hooks/useLiveDecisions";
 import {
   ArrowLeftRight,
   ShieldCheck,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 interface TransactionsApiResponse {
-  transactions: LiveDecisionItem[];
+  transactions: TransactionRow[];
   total: number;
 }
 
@@ -29,7 +29,7 @@ export function TransactionsPage() {
         setLoading(true);
         const data = await apiGet<TransactionsApiResponse>(API.transactions);
         if (data?.transactions) {
-          setTransactions(data.transactions);
+          setTransactions(data.transactions.map(toFeedItem));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load transactions");

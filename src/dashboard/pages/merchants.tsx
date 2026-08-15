@@ -15,9 +15,53 @@ interface MerchantItem {
   volumeUsd24h: string;
 }
 
+/** CORE has no merchants table yet, so it derives this from each agent's policy allowlist. */
+interface PolicyMerchantGroup {
+  agentId: string;
+  policyVersion: number;
+  allowed: { domain: string; pinnedRecipient: string | null }[];
+  blocked: string[];
+  unknownMerchantAction: string;
+}
+
 interface MerchantsResponse {
-  merchants: MerchantItem[];
+  merchants: PolicyMerchantGroup[];
   total: number;
+}
+
+// One row per domain, not per agent. Two agents allowlisting the same merchant is one merchant
+// with one pinned recipient, so the groups are flattened and deduplicated by domain here.
+// txCount24h and volumeUsd24h have no source on this endpoint — the cards render them as zero.
+function toMerchantItems(groups: PolicyMerchantGroup[]): MerchantItem[] {
+  const byDomain = new Map<string, MerchantItem>();
+
+  for (const group of groups) {
+    for (const entry of group.allowed) {
+      byDomain.set(entry.domain, {
+        domain: entry.domain,
+        name: entry.domain,
+        status: "ALLOWED",
+        pinnedRecipient: entry.pinnedRecipient ?? "",
+        trustLevel: entry.pinnedRecipient ? "PINNED" : "UNPINNED",
+        txCount24h: 0,
+        volumeUsd24h: "0.00",
+      });
+    }
+    // A blocked domain must never be overwritten by an allow from a different agent's policy.
+    for (const domain of group.blocked) {
+      byDomain.set(domain, {
+        domain,
+        name: domain,
+        status: "BLOCKED",
+        pinnedRecipient: "",
+        trustLevel: "BLOCKED",
+        txCount24h: 0,
+        volumeUsd24h: "0.00",
+      });
+    }
+  }
+
+  return [...byDomain.values()];
 }
 
 export function MerchantsPage() {
@@ -31,7 +75,7 @@ export function MerchantsPage() {
         setLoading(true);
         const data = await apiGet<MerchantsResponse>(API.merchants);
         if (data?.merchants) {
-          setMerchants(data.merchants);
+          setMerchants(toMerchantItems(data.merchants));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load merchants");
