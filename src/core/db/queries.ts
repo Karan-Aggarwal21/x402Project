@@ -3,12 +3,15 @@
 // change like adding multi-tenancy to one file instead of twenty-six.
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/core/db";
-import type { AgentRow, PaymentIntentRow, PolicyRow } from "@/core/db/schema";
+import type { AgentRow, NewPaymentIntentRow, PaymentIntentRow, PolicyRow } from "@/core/db/schema";
 import { windowKeys } from "@/core/budget/windows";
-import type { SpendCounters } from "@/shared/types";
+import type { EvaluationResult, SpendCounters } from "@/shared/types";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
+
+/** PAY's 202 response assumes this window, so the two have to agree. See their blocker B8. */
+export const APPROVAL_WINDOW_MS = 15 * 60_000;
 
 // Aggregates come back from the driver as strings so a bigint never loses precision on the way out.
 const toMinorUnits = (value: unknown): bigint => BigInt(String(value ?? "0"));
@@ -65,13 +68,42 @@ export async function createPolicyVersion(_agentId: string, _rules: unknown, _by
 
 // --- intents --------------------------------------------------------------
 
-export async function insertIntent(_input: Partial<PaymentIntentRow>): Promise<PaymentIntentRow> {
-  throw new Error("NOT_IMPLEMENTED: insertIntent");
+/** Idempotent on the primary key: a retried evaluation must not create a second attempt row. */
+export async function insertIntent(input: NewPaymentIntentRow): Promise<PaymentIntentRow> {
+  const [inserted] = await getDb()
+    .insert(schema.paymentIntents)
+    .values(input)
+    .onConflictDoNothing({ target: schema.paymentIntents.id })
+    .returning();
+  if (inserted) return inserted;
+
+  const existing = await getIntentById(String(input.id));
+  if (!existing) throw new Error(`insertIntent could not read back intent ${input.id}`);
+  return existing;
 }
 
 /** Writes the decision onto the intent. Must happen before anything is signed. */
-export async function recordDecision(_intentId: string, _result: unknown): Promise<void> {
-  throw new Error("NOT_IMPLEMENTED: recordDecision");
+export async function recordDecision(intentId: string, result: EvaluationResult): Promise<void> {
+  const heldUntil = new Date(Date.now() + APPROVAL_WINDOW_MS);
+
+  await getDb()
+    .update(schema.paymentIntents)
+    .set({
+      decision: result.decision,
+      policyVersion: result.policyVersion,
+      reasons: result.reasons,
+      matchedRules: result.matchedRules,
+      riskScore: result.riskScore,
+      riskSignals: result.riskSignals,
+      latencyMs: result.latencyMs,
+      // ALLOW keeps the intent in EVALUATING: the ledger and the signer move it on from there.
+      ...(result.decision === "BLOCK" ? { state: "BLOCKED" as const } : {}),
+      ...(result.decision === "HOLD"
+        ? { state: "HELD" as const, approvalStatus: "PENDING" as const, approvalExpiresAt: heldUntil }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.paymentIntents.id, intentId));
 }
 
 export async function setIntentState(_intentId: string, _state: PaymentIntentRow["state"]): Promise<void> {

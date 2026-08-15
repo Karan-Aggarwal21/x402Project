@@ -214,9 +214,8 @@ describe("policy rules", () => {
     expect(ruleWalletAllowance(exact)).toBeNull();
   });
 
-  it.todo("11 BLOCKs when riskScore >= riskBlockScore — engine.test.ts at C4");
-  it.todo("12 HOLDs when the amount sits in holdBetweenUsd — engine.test.ts at C4");
-  it.todo("13 ALLOWs a clean low-risk payment — engine.test.ts at C4");
+  // Rules 11-13 are risk tiering, which only exists once rules and score are combined.
+  // They are asserted in tests/policy/engine.test.ts as "11", "12" and "13".
 });
 
 describe("BLOCKING_RULES", () => {
