@@ -1,3 +1,61 @@
-/** OWNER: DEMO · One $0.50 payment. EXPECT: 🟡 HOLD -> admin approves -> settles. */
-export async function run() { throw new Error("NOT_IMPLEMENTED: D7"); }
+// OWNER: DEMO · $0.50 premium-report (analyst edition, inside the hold band).
+// EXPECT: HOLD (202 APPROVAL_REQUIRED) -> a human approves -> the retry settles with a tx hash.
+// Needs CORE's HOLD path + approvals API. The approve/poll calls below follow API_DOCS 5.4 —
+// adjust here if CORE ships a different shape, nowhere else.
+import { env } from "@/shared/env";
+import { guardedFetch } from "@/demo/agent/guardedFetch";
+import { TOOL_ENDPOINTS } from "@/demo/agent/tools";
+import { PREMIUM_REPORT_EDITIONS } from "@/demo/sandbox/pricing";
 
+const POLL_INTERVAL_MS = 3_000;
+const APPROVAL_WAIT_MS = 5 * 60_000;
+
+function readApprovalStatus(payload: unknown): string | undefined {
+  // CORE owns the final shape; look one level into `intent` if that is where it lands.
+  if (typeof payload !== "object" || payload === null) return undefined;
+  const data = payload as Record<string, unknown>;
+  const intent = (data.intent ?? data) as Record<string, unknown>;
+  return typeof intent.approvalStatus === "string" ? intent.approvalStatus : undefined;
+}
+
+async function waitForApproval(intentId: string, log: (line: string) => void): Promise<void> {
+  const deadline = Date.now() + APPROVAL_WAIT_MS;
+  log(`[D7] waiting for a human — approve it in the dashboard (/approvals)`);
+  while (Date.now() < deadline) {
+    const response = await fetch(`${env.APP_URL}/api/v1/payments/${intentId}`);
+    const status = readApprovalStatus((await response.json().catch(() => null))?.data);
+    if (status === "APPROVED") return;
+    if (status === "REJECTED" || status === "EXPIRED") {
+      throw new Error(`[D7] approval ${status.toLowerCase()} — the demo ends here, and no money moved`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+  throw new Error("[D7] nobody approved within 5 minutes");
+}
+
+export async function run(log: (line: string) => void = console.log): Promise<void> {
+  const url = `${TOOL_ENDPOINTS.premiumReport}?edition=analyst`;
+  const priceUsd = PREMIUM_REPORT_EDITIONS.analyst;
+  const body = { topic: "EV battery recycling market", edition: "analyst" };
+  log(`[D7] POST ${url} ($${priceUsd}) — inside the hold band, expect HOLD`);
+
+  const held = await guardedFetch(url, body, "D7: buy the analyst-edition report");
+  if (held.ok) {
+    throw new Error(`[D7] SETTLED immediately (tx: ${held.txHash}) — the hold band did not fire`);
+  }
+  if (held.blocked?.code !== "APPROVAL_REQUIRED" || !held.approval?.intentId) {
+    throw new Error(`[D7] expected HOLD APPROVAL_REQUIRED, got ${held.blocked?.code ?? "an unreadable response"}`);
+  }
+  const { intentId } = held.approval;
+  log(`[D7] HOLD — intent ${intentId} is waiting for review${held.approval.expiresAt ? ` (expires ${held.approval.expiresAt})` : ""}`);
+
+  await waitForApproval(intentId, log);
+  log("[D7] approved — resuming the same purchase");
+
+  const settled = await guardedFetch(url, body, "D7: resume after approval", { idempotencyKey: intentId });
+  if (!settled.ok || !settled.txHash) {
+    throw new Error(`[D7] approved but the retry did not settle: ${settled.blocked?.code ?? "no tx hash"}`);
+  }
+  log(`[D7] payment resumed and settled — txHash: ${settled.txHash}`);
+  log(`[D7] attempted $${priceUsd}, spent $${priceUsd} — with a human in the loop`);
+}
