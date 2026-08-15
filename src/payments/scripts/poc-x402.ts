@@ -13,7 +13,7 @@ import { HEADER, decodePaymentRequired, decodePaymentResponse, decodePaymentSign
 import { env } from "@/shared/env";
 import { toUsd } from "@/shared/money";
 
-const TARGET = `${env.APP_URL}/api/gw/poc-seller`;
+const TARGET = `${env.APP_URL}/api/sandbox/search`;
 const NOTES_PATH = resolve(process.cwd(), "../Docs/x402-notes.md");
 
 const REQUEST = {
