@@ -29,6 +29,9 @@
       "@/payments/*": [
         "./src/payments/*"
       ],
+      "@/core": [
+        "./src/core/index.ts"
+      ],
       "@/core/*": [
         "./src/core/*"
       ],

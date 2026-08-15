@@ -1,6 +1,6 @@
 // OWNER: PAY. The main flow: forward -> 402 -> evaluate -> reserve -> sign -> retry -> settle -> commit.
 // Once a reservation exists, every exit path releases it. A leak silently shrinks the agent's budget.
-import { commitBudget, evaluatePayment, releaseBudget, reserveBudget } from "@/core/mock";
+import { commitBudget, evaluatePayment, releaseBudget, reserveBudget } from "@/core";
 import { buildIntentFromRequirements, resolveTarget } from "@/payments/intent/build";
 import { forwardToMerchant } from "@/payments/gateway/forward";
 import { mintAllowToken } from "@/payments/wallet/allowToken";
@@ -120,7 +120,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     };
   }
 
-  const evaluation = await evaluatePayment({ intent } as any);
+  const evaluation = await evaluatePayment({ intent, idempotencyKey: input.idempotencyKey });
   if (evaluation.decision !== "ALLOW") {
     return {
       status: evaluation.decision === "HOLD" ? "PENDING_APPROVAL" : "BLOCKED",
@@ -133,9 +133,24 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     };
   }
 
-  // TODO(PAY): C7 must capture the returned reservationId and pass it to commit/release, which the
-  // real @/core API requires and the mock does not accept. See blocker B7.
-  const reservation = await reserveBudget(agentId, intent.intentId, intent.amountMinor);
+  // reserveBudget throws rather than returning a decision when a window has no room. That is still
+  // a policy outcome, not a fault, so it has to leave here as BLOCKED — a 500 would tell the agent
+  // the guard broke when the guard in fact worked. No reservation exists yet, so nothing to release.
+  let reservationId: string;
+  try {
+    ({ reservationId } = await reserveBudget(agentId, intent.intentId, intent.amountMinor));
+  } catch (error) {
+    const failure = failureReason(error);
+    return {
+      status: "BLOCKED",
+      intentId: intent.intentId,
+      ...target,
+      amountUsd: toUsd(intent.amountMinor),
+      decision: "BLOCK",
+      reasons: [{ ...failure, rule: "budget.ledger" }],
+      onChain: UNSIGNED,
+    };
+  }
 
   try {
     const allowToken = mintAllowToken(intent.intentHash, newId("evaluation")).token;
@@ -149,7 +164,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     }
 
     const settlement = readSettlement(paid);
-    await commitBudget(reservation.reservationId, settlement.txHash);
+    await commitBudget(reservationId, settlement.txHash);
 
     return {
       status: "SETTLED",
@@ -169,14 +184,15 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     };
   } catch (error) {
     // Signing, retry, timeout, verify, settle — whichever failed, the reservation goes back.
-    await releaseBudget(reservation.reservationId, "settlement failed");
+    const failure = failureReason(error);
+    await releaseBudget(reservationId, failure.message);
     return {
       status: "FAILED",
       intentId: intent.intentId,
       ...target,
       amountUsd: toUsd(intent.amountMinor),
       decision: "ALLOW",
-      reasons: [failureReason(error)],
+      reasons: [failure],
       onChain: UNSIGNED,
     };
   }
