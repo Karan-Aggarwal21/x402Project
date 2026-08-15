@@ -64,7 +64,7 @@ never conflicts with anyone.
 | C5 | Read queries | C7, C8 | ☑ |
 | C6 | Budget ledger | 🟥 **PAY** | ☑ |
 | C7 | `evaluatePayment()` + audit chain | C8 | ☑ |
-| C8 | API handlers | 🟩 **UI** | ☐ |
+| C8 | API handlers | 🟩 **UI** | ☑ |
 
 ---
 

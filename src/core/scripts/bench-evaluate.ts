@@ -1,13 +1,7 @@
 // OWNER: CORE. NFR-1 gate: 500 intents through the pure engine, prints p50/p95 and fails over budget.
 // The engine does no I/O, so this measures the decision itself rather than the database around it.
 import { evaluate } from "@/core/policy/engine";
-import {
-  makeContext,
-  makeCounters,
-  makeIntent,
-  makePolicy,
-  makePolicyRules,
-} from "@/core/tests/fixtures";
+import { makeContext, makeCounters, makeIntent } from "@/core/tests/fixtures";
 import { toMinor } from "@/shared/money";
 
 const RUNS = 500;
