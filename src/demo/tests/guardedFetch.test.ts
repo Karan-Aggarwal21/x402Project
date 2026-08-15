@@ -29,6 +29,19 @@ describe("guardedFetch", () => {
     });
   });
 
+  it("forwards the caller ceiling as maxAmountUsd when given", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(envelope(402, {
+      status: false, statusCode: 402, message: "blocked",
+      error: { code: "PER_TRANSACTION_LIMIT_EXCEEDED" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await guardedFetch("/api/sandbox/premium-report", {}, "buy report", { maxAmountUsd: "0.10" });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string).maxAmountUsd).toBe("0.10");
+  });
+
   it("maps 200 to ok with the merchant body and the tx hash", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(envelope(200, {
       status: true, statusCode: 200,

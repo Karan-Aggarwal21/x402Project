@@ -10,6 +10,11 @@ export interface GuardedResult {
   txHash?: string;
 }
 
+export interface GuardedOptions {
+  // The caller's own ceiling, enforced by the gateway before policy is even asked (D2).
+  maxAmountUsd?: string;
+}
+
 const GUARD_KEY = "gk_live_researchbot_demo";
 const GUARD_KEY_HEADER = "X-Guard-Key";
 
@@ -31,7 +36,12 @@ function blockedResult(code: string, message: string): GuardedResult {
   return { ok: false, blocked: { code, message } };
 }
 
-export async function guardedFetch(url: string, body: unknown, reason: string): Promise<GuardedResult> {
+export async function guardedFetch(
+  url: string,
+  body: unknown,
+  reason: string,
+  options?: GuardedOptions,
+): Promise<GuardedResult> {
   const target = url.startsWith("http") ? url : `${env.APP_URL}${url}`;
 
   let response: Response;
@@ -39,7 +49,13 @@ export async function guardedFetch(url: string, body: unknown, reason: string): 
     response = await fetch(`${env.APP_URL}/api/gw/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json", [GUARD_KEY_HEADER]: GUARD_KEY },
-      body: JSON.stringify({ url: target, method: "POST", body, reason }),
+      body: JSON.stringify({
+        url: target,
+        method: "POST",
+        body,
+        reason,
+        ...(options?.maxAmountUsd ? { maxAmountUsd: options.maxAmountUsd } : {}),
+      }),
     });
   } catch (error) {
     // An unreachable Guard is a block, not a crash — the agent reports it and moves on.
