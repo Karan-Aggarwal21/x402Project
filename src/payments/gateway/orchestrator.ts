@@ -120,7 +120,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     };
   }
 
-  const evaluation = await evaluatePayment();
+  const evaluation = await evaluatePayment({ intent } as any);
   if (evaluation.decision !== "ALLOW") {
     return {
       status: evaluation.decision === "HOLD" ? "PENDING_APPROVAL" : "BLOCKED",
@@ -135,7 +135,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
 
   // TODO(PAY): C7 must capture the returned reservationId and pass it to commit/release, which the
   // real @/core API requires and the mock does not accept. See blocker B7.
-  await reserveBudget(intent.intentId, intent.amountMinor);
+  const reservation = await reserveBudget(agentId, intent.intentId, intent.amountMinor);
 
   try {
     const allowToken = mintAllowToken(intent.intentHash, newId("evaluation")).token;
@@ -149,7 +149,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     }
 
     const settlement = readSettlement(paid);
-    await commitBudget();
+    await commitBudget(reservation.reservationId, settlement.txHash);
 
     return {
       status: "SETTLED",
@@ -169,7 +169,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     };
   } catch (error) {
     // Signing, retry, timeout, verify, settle — whichever failed, the reservation goes back.
-    await releaseBudget();
+    await releaseBudget(reservation.reservationId, "settlement failed");
     return {
       status: "FAILED",
       intentId: intent.intentId,
