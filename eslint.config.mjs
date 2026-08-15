@@ -22,8 +22,9 @@ const boundaries = [
   },
   {
     // If the x402 SDK surface differs from the docs, exactly one file changes.
+    // Sellers are exempt: sellers use @x402/next, which the buyer-side adapter does not wrap.
     files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["src/payments/x402/**"],
+    ignores: ["src/payments/x402/**", "src/demo/sandbox/**"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{
@@ -54,8 +55,29 @@ const boundaries = [
     },
   },
   {
-    // Payments consumes the decision, never the rules that produced it.
+    // Payments consumes the decision, never the rules that produced it — and only src/payments/x402/**
+    // may touch the SDK. Both bans live in ONE block on purpose: flat config REPLACES rule options
+    // rather than merging them, so splitting these across two blocks silently drops the first.
     files: ["src/payments/**"],
+    ignores: ["src/payments/x402/**"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          {
+            group: ["@/core/policy/*", "@/core/risk/*", "@/core/db/*"],
+            message: "Import the public API from @/core instead of reaching into core internals.",
+          },
+          {
+            group: ["@x402/*"],
+            message: "Only src/payments/x402/** may import the x402 SDK.",
+          },
+        ],
+      }],
+    },
+  },
+  {
+    // The SDK boundary files are exempt from the x402 ban above, but not from the core-internals one.
+    files: ["src/payments/x402/**"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{

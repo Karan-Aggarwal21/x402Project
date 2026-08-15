@@ -12,6 +12,7 @@ export const ID_PREFIX = {
   merchant: "mrc",
   audit: "aud",
   reservation: "rsv",
+  ledger: "led",
   simulation: "sim",
 } as const;
 

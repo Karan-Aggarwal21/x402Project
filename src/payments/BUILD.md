@@ -55,15 +55,17 @@ git log --all --oneline | grep -oE "\((core|pay|ui|demo)\): C[0-9]+" | sort -u
 
 ## Progress
 
+Running record of what was actually built, decided and blocked: **[PROGRESS.md](./PROGRESS.md)**.
+
 | | Checkpoint | Unblocks | Done |
 |---|---|---|---|
-| C1 | Real x402 payment settles | 🚨 the whole project | ☐ |
-| C2 | Header codecs | C4 | ☐ |
-| C3 | SDK adapter + facilitator types | C6 | ☐ |
-| C4 | Intent build + hash | C5 | ☐ |
-| C5 | allowToken + signer | C6 | ☐ |
-| C6 | Gateway orchestrator | C7 | ☐ |
-| C7 | `POST /api/gw/request` live | 🟧 **DEMO** | ☐ |
+| C1 | Real x402 payment settles | 🚨 the whole project | ☑ |
+| C2 | Header codecs | C4 | ☑ |
+| C3 | SDK adapter + facilitator types | C6 | ☑ |
+| C4 | Intent build + hash | C5 | ☑ |
+| C5 | allowToken + signer | C6 | ☑ |
+| C6 | Gateway orchestrator | C7 | ☑ |
+| C7 | `POST /api/gw/request` live | 🟧 **DEMO** | ◐ |
 
 ---
 
