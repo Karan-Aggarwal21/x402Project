@@ -57,14 +57,14 @@ never conflicts with anyone.
 
 | | Checkpoint | Unblocks | Done |
 |---|---|---|---|
-| C1 | Budget window keys | C6 | ☐ |
-| C2 | The 10 blocking rules | C4 | ☐ |
-| C3 | Risk score | C4 | ☐ |
-| C4 | The engine — `evaluate()` | PAY's real swap | ☐ |
-| C5 | Read queries | C7, C8 | ☐ |
-| C6 | Budget ledger | 🟥 **PAY** | ☐ |
-| C7 | `evaluatePayment()` + audit chain | C8 | ☐ |
-| C8 | API handlers | 🟩 **UI** | ☐ |
+| C1 | Budget window keys | C6 | ☑ |
+| C2 | The 10 blocking rules | C4 | ☑ |
+| C3 | Risk score | C4 | ☑ |
+| C4 | The engine — `evaluate()` | PAY's real swap | ☑ |
+| C5 | Read queries | C7, C8 | ☑ |
+| C6 | Budget ledger | 🟥 **PAY** | ☑ |
+| C7 | `evaluatePayment()` + audit chain | C8 | ☑ |
+| C8 | API handlers | 🟩 **UI** | ☑ |
 
 ---
 

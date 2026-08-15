@@ -37,6 +37,11 @@ export const ERROR_CODES = {
 
   // --- appended by PAY at C5 ---
   ALLOW_TOKEN_INVALID: { http: 403, message: "Signing authorisation is missing, expired, replayed or does not match the approved intent." },
+
+  // --- appended by CORE at C8, for the control plane rather than the money path ---
+  VALIDATION_FAILED: { http: 422, message: "Request failed validation." },
+  NOT_FOUND: { http: 404, message: "Resource not found." },
+  FORBIDDEN: { http: 403, message: "This action requires an ADMIN session." },
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

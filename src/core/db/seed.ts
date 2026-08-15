@@ -21,7 +21,9 @@ const RESOURCES = [
 
 function policyRules(overrides: Partial<PolicyRules> = {}): PolicyRules {
   return {
-    financial: { maxPerTransactionUsd: "0.10", hourlyBudgetUsd: "1.00", dailyBudgetUsd: "5.00", monthlyBudgetUsd: "50.00" },
+    // The per-transaction cap has to clear the top of holdBetweenUsd, or rule 6 blocks every
+    // amount the review band is meant to catch and the approvals queue can never fill.
+    financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "1.00", dailyBudgetUsd: "5.00", monthlyBudgetUsd: "50.00" },
     merchant: {
       allowedMerchants: [SANDBOX],
       blockedMerchants: ["rogue.example.com"],
@@ -108,6 +110,12 @@ async function main() {
     merchant: { ...policyRules().merchant, allowedMerchants: [SANDBOX, "api.exchangerate.host"] },
   });
   const v3Rules = policyRules();
+  // DataBot's typed columns are tighter than the defaults, and the engine reads `rules` — so the
+  // JSON has to carry the same numbers or the row describes a policy that is not being enforced.
+  const dataBotRules = policyRules({
+    financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "0.50", dailyBudgetUsd: "2.00", monthlyBudgetUsd: "20.00" },
+    velocity: { maxTxPerMinute: 3, maxTxPerHour: 20, maxTxPerMerchantPerMinute: 5 },
+  });
 
   await db.insert(schema.policies).values([
     {
@@ -119,23 +127,23 @@ async function main() {
     },
     {
       id: v2, agentId: researchBotId, version: 2, isActive: false,
-      maxPerTransactionMinor: toMinor("0.10"), hourlyBudgetMinor: toMinor("1.00"),
+      maxPerTransactionMinor: toMinor("1.00"), hourlyBudgetMinor: toMinor("1.00"),
       dailyBudgetMinor: toMinor("5.00"), monthlyBudgetMinor: toMinor("50.00"),
       maxTxPerMinute: 10, maxTxPerHour: 100, rules: v2Rules,
       createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(300),
     },
     {
       id: v3, agentId: researchBotId, version: 3, isActive: true,
-      maxPerTransactionMinor: toMinor("0.10"), hourlyBudgetMinor: toMinor("1.00"),
+      maxPerTransactionMinor: toMinor("1.00"), hourlyBudgetMinor: toMinor("1.00"),
       dailyBudgetMinor: toMinor("5.00"), monthlyBudgetMinor: toMinor("50.00"),
       maxTxPerMinute: 10, maxTxPerHour: 100, rules: v3Rules,
       createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(120),
     },
     {
       id: dataBotPolicyId, agentId: dataBotId, version: 1, isActive: true,
-      maxPerTransactionMinor: toMinor("0.10"), hourlyBudgetMinor: toMinor("0.50"),
+      maxPerTransactionMinor: toMinor("1.00"), hourlyBudgetMinor: toMinor("0.50"),
       dailyBudgetMinor: toMinor("2.00"), monthlyBudgetMinor: toMinor("20.00"),
-      maxTxPerMinute: 3, maxTxPerHour: 20, rules: policyRules(),
+      maxTxPerMinute: 3, maxTxPerHour: 20, rules: dataBotRules,
       createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(540),
     },
   ]);
