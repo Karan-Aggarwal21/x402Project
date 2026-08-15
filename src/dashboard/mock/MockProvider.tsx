@@ -2,10 +2,16 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-export function MockProvider({ children }: { children: ReactNode }) {
-  const [mockReady, setMockReady] = useState(false);
+/**
+ * `enabled` comes from USE_MOCKS, read by the server layout — a client component cannot see a
+ * non-NEXT_PUBLIC variable. Off means the worker never starts, so the dashboard reaches the real
+ * API. Leaving it always-on races MSW against the real API and paints fixtures next to live rows.
+ */
+export function MockProvider({ children, enabled = false }: { children: ReactNode; enabled?: boolean }) {
+  const [mockReady, setMockReady] = useState(!enabled);
 
   useEffect(() => {
+    if (!enabled) return;
     let isMounted = true;
 
     async function initMocks() {
@@ -33,7 +39,7 @@ export function MockProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [enabled]);
 
   if (!mockReady) {
     return (
