@@ -21,6 +21,7 @@
     "paths": {
       "@/shared/*": ["./src/shared/*"],
       "@/payments/*": ["./src/payments/*"],
+      "@/core": ["./src/core/index.ts"],
       "@/core/*": ["./src/core/*"],
       "@/dashboard/*": ["./src/dashboard/*"],
       "@/demo/*": ["./src/demo/*"],

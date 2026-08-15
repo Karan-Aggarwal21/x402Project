@@ -15,7 +15,7 @@ const core = vi.hoisted(() => ({
   commitBudget: vi.fn(),
   releaseBudget: vi.fn(),
 }));
-vi.mock("@/core/mock", () => core);
+vi.mock("@/core", () => core);
 
 const forward = vi.hoisted(() => ({ forwardToMerchant: vi.fn(), isStrippedHeader: vi.fn() }));
 vi.mock("@/payments/gateway/forward", () => forward);
@@ -108,6 +108,24 @@ describe("runGuardedRequest — nothing is signed before ALLOW", () => {
     expect(result.status).toBe("PENDING_APPROVAL");
     expect(result.onChain.signed).toBe(false);
     expect(core.reserveBudget).not.toHaveBeenCalled();
+  });
+
+  // The real ledger throws instead of returning a decision when a window has no room. That is a
+  // policy outcome, so it has to read as BLOCKED here — a FAILED would claim the guard broke.
+  it("blocks, and signs nothing, when the ledger refuses the reservation", async () => {
+    forward.forwardToMerchant.mockResolvedValueOnce(quoted());
+    core.reserveBudget.mockRejectedValueOnce(
+      Object.assign(new Error("This payment would take daily spend over the $5.00 daily budget."), { code: "BUDGET_EXCEEDED" }),
+    );
+
+    const result = await runGuardedRequest(REQUEST);
+
+    expect(result.status).toBe("BLOCKED");
+    expect(result.onChain).toEqual({ signed: false, txHash: null });
+    expect(result.reasons[0].code).toBe("BUDGET_EXCEEDED");
+    // Nothing was reserved, so nothing may be released — a stray release would credit a phantom.
+    expect(core.releaseBudget).not.toHaveBeenCalled();
+    expect(forward.forwardToMerchant).toHaveBeenCalledOnce();
   });
 
   it("blocks on the caller's own maxAmountUsd before CORE is even asked", async () => {
