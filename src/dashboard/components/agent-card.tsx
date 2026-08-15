@@ -27,6 +27,40 @@ export interface AgentItem {
   createdAt: string;
 }
 
+/** What CORE actually serves — see toAgentDto in src/core/handlers/serialize.ts. */
+export interface AgentRow {
+  agentId: string;
+  name: string;
+  description: string;
+  status: "ACTIVE" | "FROZEN";
+  activePolicyId: string;
+  wallet: { address: string; network: string; allowanceCapUsd: string; fundedUsd: string };
+  frozenAt?: string | null;
+  frozenReason?: string | null;
+  createdAt: string;
+}
+
+// The cards want a flat shape; CORE groups the wallet. Reading agent.walletAddress off the raw row
+// throws on .slice and takes the whole page down, so the flattening happens on the way in.
+// spentUsd has no source on the agents endpoints — it lives on /api/v1/budgets/:agentId.
+export function toAgentItem(row: AgentRow, activePolicyVersion = 0): AgentItem {
+  return {
+    id: row.agentId,
+    name: row.name,
+    description: row.description,
+    status: row.status,
+    walletAddress: row.wallet.address,
+    walletAllowanceCapUsd: row.wallet.allowanceCapUsd,
+    walletFundedUsd: row.wallet.fundedUsd,
+    spentUsd: "0.00",
+    activePolicyId: row.activePolicyId,
+    activePolicyVersion,
+    frozenAt: row.frozenAt ?? undefined,
+    frozenReason: row.frozenReason ?? undefined,
+    createdAt: row.createdAt,
+  };
+}
+
 /** OWNER: UI · Agent summary card: status, wallet, budget bar, 24h decision mix. */
 export function AgentCard({ agent }: { agent: AgentItem }) {
   const isFrozen = agent.status === "FROZEN";

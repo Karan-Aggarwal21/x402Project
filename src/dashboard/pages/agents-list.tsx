@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiGet } from "@/dashboard/api-client/client";
 import { API } from "@/dashboard/api-client/endpoints";
-import { AgentCard, type AgentItem } from "@/dashboard/components/agent-card";
+import { AgentCard, toAgentItem, type AgentItem, type AgentRow } from "@/dashboard/components/agent-card";
 import { DecisionBar } from "@/dashboard/charts/decision-bar";
 import {
   Bot,
@@ -13,44 +13,9 @@ import {
   Coins,
 } from "lucide-react";
 
-/** What CORE actually serves — see toAgentDto in src/core/handlers/serialize.ts. */
-interface AgentRow {
-  agentId: string;
-  name: string;
-  description: string;
-  status: "ACTIVE" | "FROZEN";
-  activePolicyId: string;
-  wallet: { address: string; network: string; allowanceCapUsd: string; fundedUsd: string };
-  frozenAt?: string | null;
-  frozenReason?: string | null;
-  createdAt: string;
-}
-
 interface AgentsApiResponse {
   agents: AgentRow[];
   total: number;
-}
-
-// The card wants a flat shape; CORE groups the wallet. Reading agent.walletAddress off the raw
-// row throws on .slice and takes the whole page down, so the flattening happens here on the way in.
-// spentUsd and activePolicyVersion have no source on this endpoint — they live on
-// /api/v1/budgets/:agentId and /api/v1/policies/:agentId. TODO(UI): fetch them or drop the tiles.
-function toAgentItem(row: AgentRow): AgentItem {
-  return {
-    id: row.agentId,
-    name: row.name,
-    description: row.description,
-    status: row.status,
-    walletAddress: row.wallet.address,
-    walletAllowanceCapUsd: row.wallet.allowanceCapUsd,
-    walletFundedUsd: row.wallet.fundedUsd,
-    spentUsd: "0.00",
-    activePolicyId: row.activePolicyId,
-    activePolicyVersion: 0,
-    frozenAt: row.frozenAt ?? undefined,
-    frozenReason: row.frozenReason ?? undefined,
-    createdAt: row.createdAt,
-  };
 }
 
 export function AgentsListPage() {

@@ -9,7 +9,7 @@ import { BudgetGauge } from "@/dashboard/components/budget-gauge";
 import { VelocityMeter } from "@/dashboard/components/velocity-meter";
 import { SpendArea } from "@/dashboard/charts/spend-area";
 import { DecisionFeed } from "@/dashboard/components/decision-feed";
-import type { AgentItem } from "@/dashboard/components/agent-card";
+import { toAgentItem, type AgentItem, type AgentRow } from "@/dashboard/components/agent-card";
 import {
   ArrowLeft,
   Bot,
@@ -23,6 +23,24 @@ import {
   Lock,
 } from "lucide-react";
 
+/** CORE groups this by window — see src/core/handlers/budgets.ts. */
+interface BudgetWindow {
+  spentUsd: string;
+  reservedUsd: string;
+  budgetUsd: string;
+  remainingUsd: string;
+  usedPercent: number;
+}
+
+interface BudgetResponse {
+  agentId: string;
+  policyVersion: number;
+  windows: { hour: BudgetWindow; day: BudgetWindow; month: BudgetWindow };
+  wallet: { allowanceCapUsd: string; fundedUsd: string; remainingUsd: string };
+  velocity: { lastMinute: number; maxTxPerMinute: number; lastHour: number; maxTxPerHour: number };
+}
+
+/** The flat shape this page renders. */
 interface AgentBudgetResponse {
   agentId: string;
   hourSpentUsd: string;
@@ -37,6 +55,24 @@ interface AgentBudgetResponse {
   maxTxPerMinute: number;
   txLastHour: number;
   maxTxPerHour: number;
+}
+
+function toFlatBudget(row: BudgetResponse): AgentBudgetResponse {
+  return {
+    agentId: row.agentId,
+    hourSpentUsd: row.windows.hour.spentUsd,
+    hourlyBudgetUsd: row.windows.hour.budgetUsd,
+    daySpentUsd: row.windows.day.spentUsd,
+    dailyBudgetUsd: row.windows.day.budgetUsd,
+    monthSpentUsd: row.windows.month.spentUsd,
+    monthlyBudgetUsd: row.windows.month.budgetUsd,
+    reservedUsd: row.windows.day.reservedUsd,
+    walletAllowanceRemainingUsd: row.wallet.remainingUsd,
+    txLastMinute: row.velocity.lastMinute,
+    maxTxPerMinute: row.velocity.maxTxPerMinute,
+    txLastHour: row.velocity.lastHour,
+    maxTxPerHour: row.velocity.maxTxPerHour,
+  };
 }
 
 /**
@@ -58,12 +94,14 @@ export function AgentDetailPage() {
       if (!agentId) return;
       try {
         setLoading(true);
+        // Both endpoints nest their payload: the agent under `agent`, the budget under `windows`
+        // and `wallet`. Assigning either envelope directly leaves every field undefined.
         const [agentData, budgetData] = await Promise.all([
-          apiGet<AgentItem>(API.agent(agentId)),
-          apiGet<AgentBudgetResponse>(API.budgets(agentId)),
+          apiGet<{ agent: AgentRow; policy?: { version: number } }>(API.agent(agentId)),
+          apiGet<BudgetResponse>(API.budgets(agentId)),
         ]);
-        setAgent(agentData);
-        setBudget(budgetData);
+        setAgent(toAgentItem(agentData.agent, agentData.policy?.version ?? 0));
+        setBudget(toFlatBudget(budgetData));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load agent");
       } finally {
