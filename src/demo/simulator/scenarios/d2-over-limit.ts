@@ -1,22 +1,20 @@
 // OWNER: DEMO · One $2.00 premium report. EXPECT: BLOCK PER_TRANSACTION_LIMIT_EXCEEDED, no tx.
-// The declared caller ceiling carries this block until CORE's policy engine lands; after the swap
-// the $0.10 per-transaction policy limit blocks it independently — same code, still no tx.
+// No caller ceiling is declared on purpose: the block must come from the agent's POLICY
+// (maxPerTransactionUsd $0.10), not from the agent restraining itself. A hijacked agent
+// would never declare a ceiling, so a demo that relies on one proves nothing.
 import { guardedFetch } from "@/demo/agent/guardedFetch";
 import { TOOL_ENDPOINTS } from "@/demo/agent/tools";
 import { PRICING } from "@/demo/sandbox/pricing";
 
-const CALLER_CEILING_USD = "0.10";
-
 export async function run(log: (line: string) => void = console.log): Promise<void> {
   const url = TOOL_ENDPOINTS.premiumReport;
   const priceUsd = PRICING[url];
-  log(`[D2] POST ${url} ($${priceUsd}), caller ceiling $${CALLER_CEILING_USD} — expect BLOCK, no tx`);
+  log(`[D2] POST ${url} ($${priceUsd}), no caller ceiling — the policy must block it`);
 
   const result = await guardedFetch(
     url,
     { topic: "EV battery recycling market" },
     "D2: buy the premium market report",
-    { maxAmountUsd: CALLER_CEILING_USD },
   );
 
   if (result.ok) {

@@ -6,10 +6,12 @@ import { getDb, schema } from "@/core/db";
 import { computeRowHash, GENESIS_HASH } from "@/core/audit/chain";
 import { newId } from "@/shared/ids";
 import { toMinor } from "@/shared/money";
+import { BASE_SEPOLIA_NETWORK_ID, BASE_SEPOLIA_USDC_ADDRESS } from "@/shared/env";
 import type { PolicyRules } from "@/shared/types";
 
 const SANDBOX = "localhost:3000";
-const MERCHANT_WALLET = "0x9a2B4c6D8e0F1a3B5c7D9e1F2a4B6c8D0e2F4a6B";
+// Pinned recipient must be the address the sandbox actually pays to, or rule 5 blocks every payment.
+const MERCHANT_WALLET = process.env.MERCHANT_WALLET_ADDRESS ?? "0x9a2B4c6D8e0F1a3B5c7D9e1F2a4B6c8D0e2F4a6B";
 const ROGUE_WALLET = "0xdEaD00000000000000000000000000000000BEEF";
 
 const RESOURCES = [
@@ -32,7 +34,7 @@ function policyRules(overrides: Partial<PolicyRules> = {}): PolicyRules {
       enforceRecipientPinning: true,
     },
     velocity: { maxTxPerMinute: 10, maxTxPerHour: 100, maxTxPerMerchantPerMinute: 5 },
-    rail: { allowedNetworks: ["base-sepolia"], allowedAssets: ["USDC"] },
+    rail: { allowedNetworks: [BASE_SEPOLIA_NETWORK_ID], allowedAssets: [BASE_SEPOLIA_USDC_ADDRESS] },
     risk: {
       autoApproveBelowUsd: "0.10",
       holdBetweenUsd: ["0.10", "1.00"],
@@ -169,7 +171,7 @@ async function main() {
     const amountMinor = toMinor(resource.usd);
     pushIntent(
       {
-        id: intentId, agentId: researchBotId, amountMinor, asset: "USDC", network: "base-sepolia",
+        id: intentId, agentId: researchBotId, amountMinor, asset: BASE_SEPOLIA_USDC_ADDRESS, network: BASE_SEPOLIA_NETWORK_ID,
         recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: resource.path, reason: resource.reason,
         nonce: `nonce_${i}`, intentHash: createHash("sha256").update(`${intentId}${resource.path}`).digest("hex"),
         state: "SETTLED", decision: "ALLOW", policyVersion: 3, reasons: [],
@@ -208,7 +210,7 @@ async function main() {
     const intentId = newId("intent");
     pushIntent(
       {
-        id: intentId, agentId: researchBotId, amountMinor: toMinor(block.usd), asset: "USDC", network: "base-sepolia",
+        id: intentId, agentId: researchBotId, amountMinor: toMinor(block.usd), asset: BASE_SEPOLIA_USDC_ADDRESS, network: BASE_SEPOLIA_NETWORK_ID,
         recipient: block.recipient, merchantDomain: block.merchant, resource: "POST /api/sandbox/premium-report",
         reason: "buy the premium dataset", nonce: `nonce_block_${i}`,
         intentHash: createHash("sha256").update(`${intentId}block`).digest("hex"),
@@ -231,7 +233,7 @@ async function main() {
     const intentId = newId("intent");
     pushIntent(
       {
-        id: intentId, agentId: researchBotId, amountMinor: toMinor(hold.usd), asset: "USDC", network: "base-sepolia",
+        id: intentId, agentId: researchBotId, amountMinor: toMinor(hold.usd), asset: BASE_SEPOLIA_USDC_ADDRESS, network: BASE_SEPOLIA_NETWORK_ID,
         recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: "POST /api/sandbox/premium-report",
         reason: hold.reason, nonce: `nonce_hold_${i}`,
         intentHash: createHash("sha256").update(`${intentId}hold`).digest("hex"),

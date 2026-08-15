@@ -23,3 +23,8 @@ export const env = {
 
 export const BASE_SEPOLIA_CHAIN_ID = 84532;
 
+// The values the x402 wire actually carries. Policies allowlist these exact strings, so a symbol
+// like "USDC" must never appear in an allowlist — it is merchant-supplied and therefore forgeable.
+export const BASE_SEPOLIA_NETWORK_ID = "eip155:84532";
+export const BASE_SEPOLIA_USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+
