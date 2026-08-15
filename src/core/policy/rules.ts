@@ -72,15 +72,21 @@ export const ruleMerchantAllowlisted: Rule = (ctx) => {
   };
 };
 
-export const ruleRecipientPinned: Rule = (ctx) => {
-  const { enforceRecipientPinning, pinnedRecipients } = ctx.policy.rules.merchant;
-  if (!enforceRecipientPinning) return null;
-
-  // The versioned policy map wins; ctx.pinnedRecipient covers merchants pinned outside the document.
-  const fromPolicy = Object.entries(pinnedRecipients).find(
+/**
+ * The recipient rule 5 enforces for this merchant, or undefined when nothing is pinned.
+ * Exported so risk/signals.ts scores exactly what the rule enforces, rather than a second opinion.
+ * The versioned policy map wins; ctx.pinnedRecipient covers merchants pinned outside the document.
+ */
+export function findPinnedRecipient(ctx: EvaluationContext): string | undefined {
+  const fromPolicy = Object.entries(ctx.policy.rules.merchant.pinnedRecipients).find(
     ([host]) => normalizeHost(host) === normalizeHost(ctx.intent.merchant),
   )?.[1];
-  const pinned = fromPolicy ?? ctx.pinnedRecipient;
+  return fromPolicy ?? ctx.pinnedRecipient;
+}
+
+export const ruleRecipientPinned: Rule = (ctx) => {
+  if (!ctx.policy.rules.merchant.enforceRecipientPinning) return null;
+  const pinned = findPinnedRecipient(ctx);
 
   // An unpinned merchant is not a violation — risk/signals.ts prices that risk instead.
   if (!pinned) return null;
