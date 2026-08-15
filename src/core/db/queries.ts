@@ -2,10 +2,21 @@
 // Handlers call these; they never import getDb() directly. That keeps a future
 // change like adding multi-tenancy to one file instead of twenty-six.
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { getDb, schema } from "@/core/db";
-import type { AgentRow, NewPaymentIntentRow, PaymentIntentRow, PolicyRow } from "@/core/db/schema";
+import { hashAgentId } from "@/core/budget/ledger";
 import { windowKeys } from "@/core/budget/windows";
-import type { EvaluationResult, SpendCounters } from "@/shared/types";
+import { getDb, schema } from "@/core/db";
+import type {
+  AgentRow,
+  AuditLogRow,
+  BudgetLedgerRow,
+  NewAgentRow,
+  NewPaymentIntentRow,
+  PaymentIntentRow,
+  PolicyRow,
+} from "@/core/db/schema";
+import { newId } from "@/shared/ids";
+import { toMinor } from "@/shared/money";
+import type { EvaluationResult, PolicyRules, SpendCounters } from "@/shared/types";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
@@ -33,12 +44,25 @@ export async function listAgents(): Promise<AgentRow[]> {
   return getDb().select().from(schema.agents).orderBy(asc(schema.agents.name));
 }
 
-export async function createAgent(_input: Partial<AgentRow>): Promise<AgentRow> {
-  throw new Error("NOT_IMPLEMENTED: createAgent");
+export async function createAgent(input: NewAgentRow): Promise<AgentRow> {
+  const [agent] = await getDb().insert(schema.agents).values(input).returning();
+  return agent;
 }
 
-export async function setAgentStatus(_agentId: string, _status: "ACTIVE" | "FROZEN", _reason?: string): Promise<void> {
-  throw new Error("NOT_IMPLEMENTED: setAgentStatus");
+export async function setAgentStatus(agentId: string, status: "ACTIVE" | "FROZEN", reason?: string): Promise<void> {
+  await getDb()
+    .update(schema.agents)
+    .set({
+      status,
+      frozenAt: status === "FROZEN" ? new Date() : null,
+      frozenReason: status === "FROZEN" ? (reason ?? null) : null,
+    })
+    .where(eq(schema.agents.id, agentId));
+}
+
+/** Returns the new plaintext once. Only its hash is ever stored. */
+export async function rotateAgentKey(agentId: string, hash: string): Promise<void> {
+  await getDb().update(schema.agents).set({ apiKeyHash: hash }).where(eq(schema.agents.id, agentId));
 }
 
 // --- policies -------------------------------------------------------------
@@ -62,8 +86,46 @@ export async function listPolicyVersions(agentId: string): Promise<PolicyRow[]> 
 }
 
 /** Creates version n+1 and flips is_active in one transaction. Never mutates a version. */
-export async function createPolicyVersion(_agentId: string, _rules: unknown, _byEmail?: string): Promise<PolicyRow> {
-  throw new Error("NOT_IMPLEMENTED: createPolicyVersion");
+export async function createPolicyVersion(
+  agentId: string,
+  rules: PolicyRules,
+  byEmail?: string,
+): Promise<PolicyRow> {
+  return getDb().transaction(async (tx) => {
+    // Serialised per agent, so two concurrent edits cannot both claim the same version number.
+    await tx.execute(sql`select pg_advisory_xact_lock(${hashAgentId(agentId)})`);
+
+    const [latest] = await tx
+      .select({ version: schema.policies.version })
+      .from(schema.policies)
+      .where(eq(schema.policies.agentId, agentId))
+      .orderBy(desc(schema.policies.version))
+      .limit(1);
+
+    await tx.update(schema.policies).set({ isActive: false }).where(eq(schema.policies.agentId, agentId));
+
+    const [created] = await tx
+      .insert(schema.policies)
+      .values({
+        id: newId("policy"),
+        agentId,
+        version: (latest?.version ?? 0) + 1,
+        isActive: true,
+        // The typed columns are what the ledger reads, so they are derived here rather than passed in.
+        maxPerTransactionMinor: toMinor(rules.financial.maxPerTransactionUsd),
+        hourlyBudgetMinor: toMinor(rules.financial.hourlyBudgetUsd),
+        dailyBudgetMinor: toMinor(rules.financial.dailyBudgetUsd),
+        monthlyBudgetMinor: toMinor(rules.financial.monthlyBudgetUsd),
+        maxTxPerMinute: rules.velocity.maxTxPerMinute,
+        maxTxPerHour: rules.velocity.maxTxPerHour,
+        rules,
+        createdByEmail: byEmail ?? null,
+      })
+      .returning();
+
+    await tx.update(schema.agents).set({ activePolicyId: created.id }).where(eq(schema.agents.id, agentId));
+    return created;
+  });
 }
 
 // --- intents --------------------------------------------------------------
@@ -106,16 +168,59 @@ export async function recordDecision(intentId: string, result: EvaluationResult)
     .where(eq(schema.paymentIntents.id, intentId));
 }
 
-export async function setIntentState(_intentId: string, _state: PaymentIntentRow["state"]): Promise<void> {
-  throw new Error("NOT_IMPLEMENTED: setIntentState");
+export async function setIntentState(intentId: string, state: PaymentIntentRow["state"]): Promise<void> {
+  await getDb()
+    .update(schema.paymentIntents)
+    .set({ state, updatedAt: new Date() })
+    .where(eq(schema.paymentIntents.id, intentId));
 }
 
-export async function recordSettlement(_intentId: string, _txHash: string, _raw: unknown): Promise<void> {
-  throw new Error("NOT_IMPLEMENTED: recordSettlement");
+/** commitBudget already stamps tx_hash and state; this adds the decoded PAYMENT-RESPONSE body. */
+export async function recordSettlement(intentId: string, txHash: string, raw: unknown): Promise<void> {
+  await getDb()
+    .update(schema.paymentIntents)
+    .set({
+      txHash,
+      settlementResponse: raw,
+      state: "SETTLED",
+      settledAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.paymentIntents.id, intentId));
 }
 
-export async function recordFailure(_intentId: string, _failureReason: string): Promise<void> {
-  throw new Error("NOT_IMPLEMENTED: recordFailure");
+export async function recordFailure(intentId: string, failureReason: string): Promise<void> {
+  await getDb()
+    .update(schema.paymentIntents)
+    .set({ state: "FAILED", failureReason, updatedAt: new Date() })
+    .where(eq(schema.paymentIntents.id, intentId));
+}
+
+export async function listLedgerForIntent(intentId: string): Promise<BudgetLedgerRow[]> {
+  return getDb()
+    .select()
+    .from(schema.budgetLedger)
+    .where(eq(schema.budgetLedger.intentId, intentId))
+    .orderBy(asc(schema.budgetLedger.createdAt));
+}
+
+export interface AuditFilters {
+  agentId?: string;
+  intentId?: string;
+  limit?: number;
+}
+
+export async function listAuditLogs(filters: AuditFilters): Promise<AuditLogRow[]> {
+  const conditions = [];
+  if (filters.agentId) conditions.push(eq(schema.auditLogs.agentId, filters.agentId));
+  if (filters.intentId) conditions.push(eq(schema.auditLogs.intentId, filters.intentId));
+
+  return getDb()
+    .select()
+    .from(schema.auditLogs)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(schema.auditLogs.seq))
+    .limit(Math.min(MAX_PAGE_SIZE, Math.max(1, filters.limit ?? DEFAULT_PAGE_SIZE)));
 }
 
 export async function getIntentById(intentId: string): Promise<PaymentIntentRow | null> {
@@ -245,12 +350,23 @@ export async function listPendingApprovals(): Promise<PaymentIntentRow[]> {
 }
 
 export async function actionApproval(
-  _intentId: string,
-  _status: "APPROVED" | "REJECTED" | "EXPIRED",
-  _reviewerEmail?: string,
-  _note?: string,
+  intentId: string,
+  status: "APPROVED" | "REJECTED" | "EXPIRED",
+  reviewerEmail?: string,
+  note?: string,
 ): Promise<void> {
-  throw new Error("NOT_IMPLEMENTED: actionApproval");
+  await getDb()
+    .update(schema.paymentIntents)
+    .set({
+      approvalStatus: status,
+      approvalReviewerEmail: reviewerEmail ?? null,
+      approvalNote: note ?? null,
+      approvalActionedAt: new Date(),
+      // An approval does not move money — it only returns the intent to the flow, or ends it.
+      state: status === "APPROVED" ? "EVALUATING" : "BLOCKED",
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.paymentIntents.id, intentId));
 }
 
 // --- metrics --------------------------------------------------------------
