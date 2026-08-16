@@ -18,44 +18,53 @@ export function PolicyForm({
   agentId = "agent_researchbot",
   initialRules,
   onVersionCreated,
+  onRulesChange,
+  onSimulateClick,
 }: {
   agentId?: string;
   initialRules?: PolicyRules;
   onVersionCreated?: () => void;
+  onRulesChange?: (rules: PolicyRules) => void;
+  onSimulateClick?: () => void;
 }) {
-  const [rules, setRules] = useState<PolicyRules>(
-    initialRules || {
-      financial: {
-        maxPerTransactionUsd: "0.10",
-        hourlyBudgetUsd: "1.00",
-        dailyBudgetUsd: "5.00",
-        monthlyBudgetUsd: "50.00",
-      },
-      merchant: {
-        allowedMerchants: ["localhost:3000"],
-        blockedMerchants: ["rogue.example.com"],
-        pinnedRecipients: { "localhost:3000": "0x9a2B4c6D8e0F1a3B5c7D9e1F2a4B6c8D0e2F4a6B" },
-        unknownMerchantAction: "BLOCK",
-        enforceRecipientPinning: true,
-      },
-      velocity: {
-        maxTxPerMinute: 10,
-        maxTxPerHour: 100,
-        maxTxPerMerchantPerMinute: 5,
-      },
-      rail: {
-        allowedNetworks: ["base-sepolia"],
-        allowedAssets: ["USDC"],
-      },
-      risk: {
-        autoApproveBelowUsd: "0.10",
-        holdBetweenUsd: ["0.10", "1.00"],
-        blockAboveUsd: "1.00",
-        riskHoldScore: 30,
-        riskBlockScore: 60,
-      },
-    }
-  );
+  const defaultRules: PolicyRules = {
+    financial: {
+      maxPerTransactionUsd: "0.10",
+      hourlyBudgetUsd: "1.00",
+      dailyBudgetUsd: "5.00",
+      monthlyBudgetUsd: "50.00",
+    },
+    merchant: {
+      allowedMerchants: ["localhost:3000"],
+      blockedMerchants: ["rogue.example.com"],
+      pinnedRecipients: { "localhost:3000": "0x9a2B4c6D8e0F1a3B5c7D9e1F2a4B6c8D0e2F4a6B" },
+      unknownMerchantAction: "BLOCK",
+      enforceRecipientPinning: true,
+    },
+    velocity: {
+      maxTxPerMinute: 10,
+      maxTxPerHour: 100,
+      maxTxPerMerchantPerMinute: 5,
+    },
+    rail: {
+      allowedNetworks: ["base-sepolia"],
+      allowedAssets: ["USDC"],
+    },
+    risk: {
+      autoApproveBelowUsd: "0.10",
+      holdBetweenUsd: ["0.10", "1.00"],
+      blockAboveUsd: "1.00",
+      riskHoldScore: 30,
+      riskBlockScore: 60,
+    },
+  };
+
+  const [rules, setRulesState] = useState<PolicyRules>(initialRules || defaultRules);
+
+  const updateRules = (newRules: PolicyRules) => {
+    setRulesState(newRules);
+    if (onRulesChange) onRulesChange(newRules);
+  };
 
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -152,7 +161,7 @@ export function PolicyForm({
               type="text"
               value={rules.financial.maxPerTransactionUsd}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   financial: { ...rules.financial, maxPerTransactionUsd: e.target.value },
                 })
@@ -167,7 +176,7 @@ export function PolicyForm({
               type="text"
               value={rules.financial.hourlyBudgetUsd}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   financial: { ...rules.financial, hourlyBudgetUsd: e.target.value },
                 })
@@ -182,7 +191,7 @@ export function PolicyForm({
               type="text"
               value={rules.financial.dailyBudgetUsd}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   financial: { ...rules.financial, dailyBudgetUsd: e.target.value },
                 })
@@ -197,7 +206,7 @@ export function PolicyForm({
               type="text"
               value={rules.financial.monthlyBudgetUsd}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   financial: { ...rules.financial, monthlyBudgetUsd: e.target.value },
                 })
@@ -222,7 +231,7 @@ export function PolicyForm({
               type="number"
               value={rules.velocity.maxTxPerMinute}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   velocity: { ...rules.velocity, maxTxPerMinute: parseInt(e.target.value) || 0 },
                 })
@@ -237,7 +246,7 @@ export function PolicyForm({
               type="number"
               value={rules.velocity.maxTxPerHour}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   velocity: { ...rules.velocity, maxTxPerHour: parseInt(e.target.value) || 0 },
                 })
@@ -252,7 +261,7 @@ export function PolicyForm({
               type="number"
               value={rules.velocity.maxTxPerMerchantPerMinute}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   velocity: {
                     ...rules.velocity,
@@ -280,7 +289,7 @@ export function PolicyForm({
               type="text"
               value={rules.risk.autoApproveBelowUsd}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   risk: { ...rules.risk, autoApproveBelowUsd: e.target.value },
                 })
@@ -296,7 +305,7 @@ export function PolicyForm({
                 type="text"
                 value={rules.risk.holdBetweenUsd[0]}
                 onChange={(e) =>
-                  setRules({
+                  updateRules({
                     ...rules,
                     risk: {
                       ...rules.risk,
@@ -311,7 +320,7 @@ export function PolicyForm({
                 type="text"
                 value={rules.risk.holdBetweenUsd[1]}
                 onChange={(e) =>
-                  setRules({
+                  updateRules({
                     ...rules,
                     risk: {
                       ...rules.risk,
@@ -330,7 +339,7 @@ export function PolicyForm({
               type="text"
               value={rules.risk.blockAboveUsd}
               onChange={(e) =>
-                setRules({
+                updateRules({
                   ...rules,
                   risk: { ...rules.risk, blockAboveUsd: e.target.value },
                 })
@@ -343,15 +352,27 @@ export function PolicyForm({
 
       {/* Buttons */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <button
-          type="button"
-          onClick={handleTestInvalid}
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
-        >
-          <Bug className="h-3.5 w-3.5 text-rose-600" />
-          <span>Test Server Validation Rejection</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleTestInvalid}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-800 text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+          >
+            <Bug className="h-3.5 w-3.5 text-rose-600" />
+            <span>Test Server Validation Rejection</span>
+          </button>
+          {onSimulateClick && (
+            <button
+              type="button"
+              onClick={onSimulateClick}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 text-xs font-semibold rounded-lg transition-colors"
+            >
+              <Shield className="h-3.5 w-3.5 text-blue-600" />
+              <span>Simulate Impact (What-If)</span>
+            </button>
+          )}
+        </div>
 
         <button
           type="submit"
