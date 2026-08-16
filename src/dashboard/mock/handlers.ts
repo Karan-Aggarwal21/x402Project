@@ -14,6 +14,13 @@ import {
   merchants,
   auditLogs,
 } from "@/dashboard/mock/fixtures";
+import type { PolicyRules } from "@/shared/types";
+
+/** One row of the transactions fixture, as the simulate handler reads it. */
+type FixtureTransaction = (typeof transactions)[number] & {
+  merchantDomain?: string;
+  merchant?: string;
+};
 
 export const handlers = [
   // 1. Metrics summary
@@ -142,7 +149,7 @@ export const handlers = [
 
   // 7b. Policy Simulate ("What-If" Historical Replay)
   http.post("*/api/v1/policies/:agentId/simulate", async ({ request, params }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as { rules?: PolicyRules; limit?: number };
     const rules = body?.rules;
     const limit = body?.limit || 50;
     const agentId = params.agentId as string;
@@ -158,7 +165,7 @@ export const handlers = [
     const allowedMerchants = rules?.merchant?.allowedMerchants || ["localhost:3000"];
     const blockedMerchants = rules?.merchant?.blockedMerchants || ["rogue.example.com"];
 
-    const results = agentTxs.map((tx: any) => {
+    const results = agentTxs.map((tx: FixtureTransaction) => {
       const amount = parseFloat(tx.amountUsd);
       const merchant = tx.merchantDomain || tx.merchant || "localhost:3000";
       let wouldBe: "ALLOW" | "HOLD" | "BLOCK" = "ALLOW";

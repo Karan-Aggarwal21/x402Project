@@ -304,7 +304,7 @@ export function PolicyEditorPage() {
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-blue-600" />
-                  Policy Impact Simulation ("What-If" Historical Replay)
+                  Policy Impact Simulation (&ldquo;What-If&rdquo; Historical Replay)
                 </h3>
                 <p className="text-xs text-zinc-600 max-w-2xl leading-relaxed">
                   Safely evaluate the last <span className="font-semibold font-mono">{simulationLimit}</span> historical payment intents against your draft policy rules. Simulation executes deterministically via pure evaluation with <span className="font-semibold text-emerald-700">zero DB writes or budget locks</span>.

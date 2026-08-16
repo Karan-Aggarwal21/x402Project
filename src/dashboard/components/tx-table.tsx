@@ -25,6 +25,9 @@ export function TxTable({
   const [search, setSearch] = useState("");
   const [selectedDecision, setSelectedDecision] = useState<string>("ALL");
   const [selectedTx, setSelectedTx] = useState<LiveDecisionItem | null>(null);
+  // Read once per mount rather than on every render: Date.now() during render is impure, and the
+  // "Nm ago" column only needs to be right as of the fetch that produced these rows.
+  const [renderedAt] = useState(() => Date.now());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -229,7 +232,7 @@ export function TxTable({
                           {new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                         </div>
                         <div className="text-[11px] text-slate-400 font-mono">
-                          {Math.max(1, Math.round((Date.now() - new Date(t.createdAt).getTime()) / 60000))}m ago
+                          {Math.max(1, Math.round((renderedAt - new Date(t.createdAt).getTime()) / 60000))}m ago
                         </div>
                       </td>
 

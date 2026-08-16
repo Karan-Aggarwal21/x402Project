@@ -29,7 +29,7 @@ interface MerchantsResponse {
   total: number;
 }
 
-function toMerchantItems(groupsOrList: any[]): MerchantItem[] {
+function toMerchantItems(groupsOrList: (PolicyMerchantGroup | MerchantItem)[]): MerchantItem[] {
   if (!Array.isArray(groupsOrList)) return [];
   const byDomain = new Map<string, MerchantItem>();
 
@@ -37,7 +37,7 @@ function toMerchantItems(groupsOrList: any[]): MerchantItem[] {
     if (!item) continue;
 
     // Shape 1: PolicyMerchantGroup { agentId, allowed: [{domain, pinnedRecipient}], blocked: [...] }
-    if (Array.isArray(item.allowed) || Array.isArray(item.blocked)) {
+    if ("allowed" in item) {
       if (Array.isArray(item.allowed)) {
         for (const entry of item.allowed) {
           if (!entry || !entry.domain) continue;
@@ -66,7 +66,7 @@ function toMerchantItems(groupsOrList: any[]): MerchantItem[] {
           });
         }
       }
-    } else if (item.domain) {
+    } else if ("domain" in item && item.domain) {
       // Shape 2: Flat MerchantItem { domain, name, status, pinnedRecipient, ... }
       byDomain.set(item.domain, {
         domain: item.domain,
