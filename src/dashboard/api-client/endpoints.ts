@@ -11,6 +11,7 @@ export const API = {
   policies: "/api/v1/policies",
   policy: (agentId: string) => `/api/v1/policies/${agentId}`,
   policyVersions: (agentId: string) => `/api/v1/policies/${agentId}/versions`,
+  policySimulate: (agentId: string) => `/api/v1/policies/${agentId}/simulate`,
   merchants: "/api/v1/merchants",
   transactions: "/api/v1/transactions",
   transaction: (id: string) => `/api/v1/transactions/${id}`,
