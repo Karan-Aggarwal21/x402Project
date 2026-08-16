@@ -107,10 +107,10 @@ export function MerchantsPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-sans">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3 font-sans">
           <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
             <Store className="h-5 w-5" />
           </div>

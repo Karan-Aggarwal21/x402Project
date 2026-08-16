@@ -169,11 +169,11 @@ export function SimulatorPage() {
       <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
                 <PlayCircle className="h-5 w-5" />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 font-sans">
                 Interactive Demo Simulator (D1–D7)
               </h2>
             </div>
@@ -206,22 +206,22 @@ export function SimulatorPage() {
         </div>
 
         {/* Live Execution Metric Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-zinc-100 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400">Scenarios Executed:</span>
-            <span className="font-bold font-mono text-zinc-900">{executedCount} / {SCENARIOS.length}</span>
+            <span className="text-slate-400">Scenarios Executed:</span>
+            <span className="font-bold font-mono text-slate-900">{executedCount} / {SCENARIOS.length}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400">Passed:</span>
+            <span className="text-slate-400">Passed:</span>
             <span className="font-bold font-mono text-emerald-600">{passedCount}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400">Blocked Spend:</span>
+            <span className="text-slate-400">Blocked Spend:</span>
             <span className="font-bold font-mono text-rose-600">$2,009.58</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400">Attack On-Chain Txs:</span>
-            <span className="font-bold font-mono text-zinc-900">0 (Zero-Gas)</span>
+            <span className="text-slate-400">Attack On-Chain Txs:</span>
+            <span className="font-bold font-mono text-slate-900">0 (Zero-Gas)</span>
           </div>
         </div>
       </div>
@@ -240,15 +240,15 @@ export function SimulatorPage() {
                 isRunning
                   ? "border-blue-400 ring-2 ring-blue-100 shadow-md"
                   : result?.passed
-                  ? "border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
-                  : "border-zinc-200"
+                  ? "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                  : "border-slate-200"
               }`}
             >
               {/* Card Header & Intent */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-zinc-900 font-mono">{s.name}</span>
+                    <span className="font-bold text-sm text-slate-900 font-mono">{s.name}</span>
                   </div>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono ${
@@ -263,17 +263,17 @@ export function SimulatorPage() {
                   </span>
                 </div>
 
-                <p className="text-xs text-zinc-600 leading-relaxed">{s.description}</p>
+                <p className="text-xs text-slate-600 leading-relaxed">{s.description}</p>
 
                 {/* Intent Code Pill */}
-                <div className="font-mono text-[11px] bg-zinc-50 p-2.5 rounded-lg border border-zinc-200 text-zinc-700">
+                <div className="font-mono text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-slate-700">
                   {s.intentPreview}
                 </div>
 
                 {/* Proof Callout */}
                 {s.highlightProof && (
-                  <p className="text-[11px] text-zinc-500 italic flex items-center gap-1.5">
-                    <span className="font-semibold not-italic text-zinc-700 font-mono">Proof:</span>
+                  <p className="text-[11px] text-slate-500 italic flex items-center gap-1.5">
+                    <span className="font-semibold not-italic text-slate-700 font-mono">Proof:</span>
                     {s.highlightProof}
                   </p>
                 )}
@@ -288,8 +288,8 @@ export function SimulatorPage() {
                   disabled={isRunning || isRunningAll}
                   className={`w-full py-2 px-4 font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
                     s.expected === "ALLOW"
-                      ? "bg-zinc-900 hover:bg-black text-white"
-                      : "bg-zinc-900 hover:bg-black text-white"
+                      ? "bg-slate-900 hover:bg-black text-white"
+                      : "bg-slate-900 hover:bg-black text-white"
                   }`}
                 >
                   {isRunning ? (

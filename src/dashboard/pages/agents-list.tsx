@@ -49,14 +49,16 @@ export function AgentsListPage() {
     .toFixed(2);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-sans">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 flex items-center gap-2.5">
-          <Bot className="h-6 w-6 text-zinc-700" />
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3 font-sans">
+          <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
+            <Bot className="h-5 w-5" />
+          </div>
           Autonomous Agents
         </h2>
-        <p className="text-sm text-zinc-500 mt-1">
+        <p className="text-sm text-slate-500 mt-1">
           Registered agent spenders governed by real-time policy rules, wallet allowances, and velocity limits.
         </p>
       </div>
@@ -64,61 +66,61 @@ export function AgentsListPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Agents */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-4 shadow-sm">
-          <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        <div className="bg-white rounded-[22px] border border-slate-200/90 p-5 shadow-xs hover:shadow-sm transition-all">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Total Agents
           </span>
-          <div className="text-2xl font-bold text-zinc-900 font-mono mt-2">
+          <div className="text-3xl sm:text-[34px] font-extrabold text-slate-900 tracking-tight font-sans mt-2">
             {loading ? "..." : total}
           </div>
-          <p className="text-xs text-zinc-400 mt-1">Managed by gateway</p>
+          <p className="text-xs text-slate-400 mt-1">Managed by gateway</p>
         </div>
 
         {/* Active Agents */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-4 shadow-sm">
+        <div className="bg-white rounded-[22px] border border-slate-200/90 p-5 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
               Active Agents
             </span>
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-bold text-emerald-600 font-mono mt-2">
+          <div className="text-3xl sm:text-[34px] font-extrabold text-emerald-600 tracking-tight font-sans mt-2">
             {loading ? "..." : activeCount}
           </div>
-          <p className="text-xs text-zinc-400 mt-1">Operating within policy</p>
+          <p className="text-xs text-slate-400 mt-1">Operating within policy</p>
         </div>
 
         {/* Frozen Agents */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-4 shadow-sm">
+        <div className="bg-white rounded-[22px] border border-slate-200/90 p-5 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-700 uppercase tracking-wider">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700">
               Frozen Agents
             </span>
             <ShieldAlert className="h-4 w-4 text-rose-600" />
           </div>
-          <div className="text-2xl font-bold text-rose-600 font-mono mt-2">
+          <div className="text-3xl sm:text-[34px] font-extrabold text-rose-600 tracking-tight font-sans mt-2">
             {loading ? "..." : frozenCount}
           </div>
-          <p className="text-xs text-rose-600 font-medium mt-1">Rule 1: Frozen subject</p>
+          <p className="text-xs text-rose-600 font-semibold mt-1">Rule 1: Frozen subject</p>
         </div>
 
         {/* Total Allowance Pool */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-4 shadow-sm">
+        <div className="bg-white rounded-[22px] border border-slate-200/90 p-5 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
               Total Allowance
             </span>
-            <Coins className="h-4 w-4 text-zinc-500" />
+            <Coins className="h-4 w-4 text-slate-500" />
           </div>
-          <div className="text-2xl font-bold text-zinc-900 font-mono mt-2">
+          <div className="text-3xl sm:text-[34px] font-extrabold text-slate-900 tracking-tight font-sans mt-2">
             ${totalAllowance}
           </div>
-          <p className="text-xs text-zinc-400 mt-1">Combined wallet caps</p>
+          <p className="text-xs text-slate-400 mt-1">Combined wallet caps</p>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm">
           {error}
         </div>
       )}
@@ -127,7 +129,7 @@ export function AgentsListPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {loading ? (
           [...Array(2)].map((_, i) => (
-            <div key={i} className="h-64 bg-zinc-100 rounded-xl animate-pulse" />
+            <div key={i} className="h-64 bg-slate-100 rounded-[22px] animate-pulse" />
           ))
         ) : (
           agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)

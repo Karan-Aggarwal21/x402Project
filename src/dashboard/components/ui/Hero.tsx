@@ -76,17 +76,18 @@ export function Hero({
       {/* 2. Centered Hero Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 text-center max-w-4xl mx-auto">
         {/* Cartoon Illustration (Robot + Guard with Shield) */}
-        <div className="w-full max-w-md md:max-w-lg mb-2">
+        <div className="w-full max-w-md md:max-w-xl mb-3">
           <WardenIllustration />
         </div>
 
-        {/* Headline Typography */}
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-white tracking-wider drop-shadow-md uppercase">
+        {/* Headline Typography. Navy, not white: the sky carries white clouds behind this text and
+            white-on-cloud disappears. The pale halo keeps it separated from the darker sky above. */}
+        <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-blue-950 tracking-wider uppercase drop-shadow-[0_2px_12px_rgba(255,255,255,0.65)]">
           {title}
         </h1>
 
         {/* Tagline */}
-        <p className="mt-2 text-xl sm:text-2xl text-white/95 font-medium tracking-wide drop-shadow">
+        <p className="mt-2 text-xl sm:text-2xl text-blue-900 font-semibold tracking-wide drop-shadow-[0_1px_8px_rgba(255,255,255,0.7)]">
           {subtitle}
         </p>
 
@@ -102,7 +103,7 @@ export function Hero({
 
           <Link
             href="/simulator"
-            className="px-8 py-3 rounded-full bg-white/15 hover:bg-white/25 active:scale-98 backdrop-blur-md border border-white/50 text-white font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
+            className="px-8 py-3 rounded-full bg-white/65 hover:bg-white/80 active:scale-98 backdrop-blur-md border border-white/80 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
           >
             Simulator
           </Link>

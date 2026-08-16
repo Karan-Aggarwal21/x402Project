@@ -36,14 +36,16 @@ export function ApprovalsPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-sans">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 flex items-center gap-2.5">
-          <ShieldAlert className="h-6 w-6 text-amber-600" />
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3 font-sans">
+          <div className="h-9 w-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+            <ShieldAlert className="h-5 w-5" />
+          </div>
           Approval Inbox (HOLD Queue)
         </h2>
-        <p className="text-sm text-zinc-500 mt-1">
+        <p className="text-sm text-slate-500 mt-1">
           Transactions falling within human review bands requiring operator sign-off before settlement.
         </p>
       </div>
@@ -58,10 +60,10 @@ export function ApprovalsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {loading ? (
           [...Array(2)].map((_, i) => (
-            <div key={i} className="h-48 bg-zinc-100 rounded-xl animate-pulse" />
+            <div key={i} className="h-48 bg-slate-100 rounded-xl animate-pulse" />
           ))
         ) : approvals.length === 0 ? (
-          <div className="col-span-2 p-12 bg-white rounded-xl border border-zinc-200 text-center text-zinc-400">
+          <div className="col-span-2 p-12 bg-white rounded-xl border border-slate-200 text-center text-slate-400">
             No pending approvals in queue.
           </div>
         ) : (
