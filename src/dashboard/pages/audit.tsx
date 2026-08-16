@@ -18,15 +18,22 @@ interface AuditEntry {
   createdAt: string;
 }
 
+/** Enough of the digest to follow a link by eye; the full value stays in the title attribute. */
+function shortHash(hash?: string | null): string {
+  if (!hash) return "—";
+  return hash.length <= 20 ? hash : `${hash.slice(0, 10)}…${hash.slice(-6)}`;
+}
+
 interface AuditResponse {
   entries: AuditEntry[];
   total: number;
 }
 
+/** Matches verifyChain in src/core/audit/chain.ts. */
 interface AuditVerifyResponse {
   valid: boolean;
-  checkedRows: number;
-  headHash: string;
+  rowsChecked: number;
+  brokenAt: string | null;
 }
 
 export function AuditPage() {
@@ -83,13 +90,14 @@ export function AuditPage() {
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-0.5 font-mono">
-              Verified {verify?.checkedRows || entries.length} entries · SHA-256 Chained
+              Verified {verify?.rowsChecked ?? entries.length} entries · SHA-256 Chained
             </p>
           </div>
         </div>
 
         <div className="hidden sm:block text-right font-mono text-xs text-slate-400">
-          <div>Head: {verify?.headHash?.slice(0, 12)}...</div>
+          {/* The newest entry is the head of the chain; verifyChain does not return it separately. */}
+          <div title={entries[0]?.rowHash}>Head: {shortHash(entries[0]?.rowHash)}</div>
         </div>
       </div>
 
@@ -113,11 +121,15 @@ export function AuditPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-500 pt-1">
                 <div className="truncate">
                   <span className="text-slate-400">Row Hash: </span>
-                  <span className="text-slate-800 font-semibold">{entry.rowHash}</span>
+                  <span className="text-slate-800 font-semibold" title={entry.rowHash}>
+                    {shortHash(entry.rowHash)}
+                  </span>
                 </div>
                 <div className="truncate">
                   <span className="text-slate-400">Prev Hash: </span>
-                  <span className="text-slate-600">{entry.prevHash}</span>
+                  <span className="text-slate-600" title={entry.prevHash}>
+                    {shortHash(entry.prevHash)}
+                  </span>
                 </div>
               </div>
             </div>

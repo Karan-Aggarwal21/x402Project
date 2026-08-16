@@ -8,6 +8,7 @@ import { API } from "@/dashboard/api-client/endpoints";
 import { DecisionBadge } from "@/dashboard/components/decision-badge";
 import { ReasonChip } from "@/dashboard/components/reason-chip";
 import { TxTimeline } from "@/dashboard/components/tx-timeline";
+import { resourceLabel } from "@/dashboard/resource-label";
 import { toFeedItem, type LiveDecisionItem, type TransactionRow } from "@/dashboard/hooks/useLiveDecisions";
 import {
   ArrowLeft,
@@ -263,7 +264,7 @@ export function TransactionDetailPage() {
           <div className="pt-2 border-t border-zinc-100 text-xs text-zinc-500 flex items-center justify-between">
             <span>Resource:</span>
             <span className="font-mono text-zinc-700 truncate max-w-[150px]">
-              {transaction.resource || "POST /api/v1/search"}
+              {resourceLabel(transaction.resource)}
             </span>
           </div>
         </div>

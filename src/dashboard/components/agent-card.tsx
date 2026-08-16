@@ -93,7 +93,6 @@ export function AgentCard({ agent }: { agent: AgentItem }) {
               <h3 className="font-bold text-base text-zinc-900 flex items-center gap-2">
                 {agent.name}
               </h3>
-              <p className="text-xs text-zinc-400 font-mono">ID: {agent.id}</p>
             </div>
           </div>
 

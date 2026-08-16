@@ -46,7 +46,7 @@ const SCENARIOS: Scenario[] = [
     expected: "ALLOW",
     category: "HAPPY_PATH",
     description: "ResearchBot requests $0.02 search API from allowlisted localhost:3000.",
-    intentPreview: "POST /api/sandbox/search ($0.02 USDC)",
+    intentPreview: "Web search — $0.02 USDC",
     highlightProof: "Zero-latency guard evaluation (~0.055ms) and genuine Base Sepolia on-chain settlement.",
   },
   {
@@ -55,7 +55,7 @@ const SCENARIOS: Scenario[] = [
     expected: "BLOCK",
     category: "RULE_BLOCK",
     description: "Attempted $2.00 purchase exceeds the $0.10 per-transaction ceiling.",
-    intentPreview: "POST /api/sandbox/premium-report ($2.00 USDC)",
+    intentPreview: "Premium report — $2.00 USDC -> PER_TRANSACTION_LIMIT_EXCEEDED",
     highlightProof: "Zero-gas interception: dropped at gateway without touching the blockchain.",
   },
   {
@@ -100,7 +100,7 @@ const SCENARIOS: Scenario[] = [
     expected: "HOLD",
     category: "HERO_ATTACK",
     description: "Payment of $0.45 falls into human review dollar band ($0.10–$1.00).",
-    intentPreview: "POST /api/sandbox/report ($0.45 USDC) -> APPROVAL_REQUIRED",
+    intentPreview: "Premium report — $0.45 USDC -> APPROVAL_REQUIRED",
     highlightProof: "120s TTL budget lock reserved and routed to Approvals Inbox for operator sign-off.",
   },
 ];
@@ -163,6 +163,13 @@ export function SimulatorPage() {
   const executedCount = Object.keys(results).length;
   const passedCount = Object.values(results).filter((r) => r.passed).length;
 
+  // Summed from the runs that actually happened, so before anything is run it reads $0.00 rather
+  // than a headline figure nobody measured.
+  const blockedSpendUsd = Object.values(results)
+    .filter((r) => r.decision === "BLOCK")
+    .reduce((sum, r) => sum + (parseFloat(r.amountUsd ?? "0") || 0), 0)
+    .toFixed(2);
+
   return (
     <div className="space-y-8">
       {/* Header & Hero Action */}
@@ -217,7 +224,7 @@ export function SimulatorPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-slate-400">Blocked Spend:</span>
-            <span className="font-bold font-mono text-rose-600">$2,009.58</span>
+            <span className="font-bold font-mono text-rose-600">${blockedSpendUsd}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-slate-400">Attack On-Chain Txs:</span>

@@ -20,6 +20,7 @@ import {
   FileCode,
   ArrowRight,
 } from "lucide-react";
+import { resourceLabel } from "@/dashboard/resource-label";
 
 interface TxDetailDrawerProps {
   tx: LiveDecisionItem | null;
@@ -232,10 +233,10 @@ export function TxDetailDrawer({ tx, isOpen, onClose }: TxDetailDrawerProps) {
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1 sm:col-span-2">
                   <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[11px]">
                     <FileCode className="h-3.5 w-3.5 text-slate-400" />
-                    <span>Resource API Endpoint</span>
+                    <span>Resource</span>
                   </div>
-                  <div className="font-mono text-slate-800 text-xs truncate" title={tx.resource}>
-                    {tx.resource || "POST /api/sandbox/premium"}
+                  <div className="text-slate-800 text-xs truncate">
+                    {resourceLabel(tx.resource)}
                   </div>
                 </div>
               </div>

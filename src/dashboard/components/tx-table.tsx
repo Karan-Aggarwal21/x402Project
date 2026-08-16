@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { LiveDecisionItem } from "@/dashboard/hooks/useLiveDecisions";
 import { TxDetailDrawer } from "@/dashboard/components/tx-detail-drawer";
+import { resourceLabel } from "@/dashboard/resource-label";
 import {
   Search,
   ShieldCheck,
@@ -213,8 +214,8 @@ export function TxTable({
                         <div className="font-bold text-slate-900 text-xs truncate" title={t.merchant}>
                           {t.merchant}
                         </div>
-                        <div className="text-[11px] font-mono text-slate-400 truncate mt-0.5" title={t.resource}>
-                          {t.resource || "POST /api/sandbox/premium"}
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {resourceLabel(t.resource)}
                         </div>
                       </td>
 

@@ -8,6 +8,7 @@
 import { useLiveDecisions, type LiveDecisionItem } from "@/dashboard/hooks/useLiveDecisions";
 import { DecisionBadge } from "@/dashboard/components/decision-badge";
 import { ReasonChip } from "@/dashboard/components/reason-chip";
+import { resourceLabel } from "@/dashboard/resource-label";
 import { ExternalLink, Clock, ShieldX, Radio } from "lucide-react";
 
 export function DecisionFeed({
@@ -121,8 +122,8 @@ function DecisionRow({ item }: { item: LiveDecisionItem }) {
             {item.resource && (
               <>
                 <span>•</span>
-                <span className="truncate max-w-[220px] font-mono text-zinc-500">
-                  {item.resource}
+                <span className="truncate max-w-[220px] text-zinc-500">
+                  {resourceLabel(item.resource)}
                 </span>
               </>
             )}

@@ -15,7 +15,10 @@ import {
   Filter,
 } from "lucide-react";
 
-import { transactions as fallbackTransactions } from "@/dashboard/mock/fixtures";
+interface MetricsSummary {
+  windowHours: number;
+  blockedUsd: string;
+}
 
 interface TransactionsApiResponse {
   transactions: TransactionRow[];
@@ -24,22 +27,23 @@ interface TransactionsApiResponse {
 
 export function TransactionsPage() {
   const [transactions, setTransactions] = useState<LiveDecisionItem[]>([]);
+  const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadTransactions() {
       try {
         setLoading(true);
-        const data = await apiGet<TransactionsApiResponse>(API.transactions);
-        if (data?.transactions && data.transactions.length > 0) {
-          setTransactions(data.transactions.map(toFeedItem));
-        } else if (fallbackTransactions && fallbackTransactions.length > 0) {
-          setTransactions(fallbackTransactions.map(toFeedItem));
-        }
+        // Money protected is measured over the guard's window by CORE, so it comes from the
+        // metrics endpoint rather than being derived from whichever page of rows loaded here.
+        const [data, summary] = await Promise.all([
+          apiGet<TransactionsApiResponse>(API.transactions),
+          apiGet<MetricsSummary>(API.metrics).catch(() => null),
+        ]);
+        setTransactions((data?.transactions ?? []).map(toFeedItem));
+        setMetrics(summary);
       } catch (err) {
-        if (fallbackTransactions && fallbackTransactions.length > 0) {
-          setTransactions(fallbackTransactions.map(toFeedItem));
-        }
+        console.error("[transactions] load failed:", err);
       } finally {
         setLoading(false);
       }
@@ -48,14 +52,19 @@ export function TransactionsPage() {
     loadTransactions();
   }, []);
 
-  const total = transactions.length > 0 ? transactions.length : 40;
-  const allowCount = transactions.filter((t) => t.decision === "ALLOW").length || 30;
-  const blockCount = transactions.filter((t) => t.decision === "BLOCK").length || 8;
-  const holdCount = transactions.filter((t) => t.decision === "HOLD").length || 2;
+  // `|| 30` here used to fire whenever a real count was legitimately zero, which is how "allowed 30"
+  // ended up sitting next to "total 50". Counts are now exactly what the rows say.
+  const total = transactions.length;
+  const allowCount = transactions.filter((t) => t.decision === "ALLOW").length;
+  const blockCount = transactions.filter((t) => t.decision === "BLOCK").length;
+  const holdCount = transactions.filter((t) => t.decision === "HOLD").length;
 
-  const allowPct = total > 0 ? Math.round((allowCount / total) * 100) : 75;
-  const blockPct = total > 0 ? Math.round((blockCount / total) * 100) : 20;
-  const holdPct = total > 0 ? Math.round((holdCount / total) * 100) : 5;
+  const allowPct = total > 0 ? Math.round((allowCount / total) * 100) : 0;
+  const blockPct = total > 0 ? Math.round((blockCount / total) * 100) : 0;
+  const holdPct = total > 0 ? Math.round((holdCount / total) * 100) : 0;
+
+  const blockedUsd = metrics?.blockedUsd ?? "0.00";
+  const windowHours = metrics?.windowHours ?? 24;
 
   return (
     <div className="space-y-8 font-sans">
@@ -111,8 +120,8 @@ export function TransactionsPage() {
               <div className="text-3xl sm:text-[34px] font-extrabold text-slate-900 tracking-tight font-sans">
                 {total}
               </div>
-              <p className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                <span>↑ 12% vs yesterday</span>
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                <span>Last {windowHours}h</span>
               </p>
             </div>
           </div>
@@ -158,7 +167,7 @@ export function TransactionsPage() {
             {/* Metric */}
             <div>
               <div className="text-3xl sm:text-[34px] font-extrabold text-slate-900 tracking-tight font-sans">
-                $2,007.54
+                ${blockedUsd}
               </div>
               <p className="text-xs text-emerald-600 font-semibold mt-1 flex items-center gap-1">
                 <span>Prevented</span>

@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Clock,
 } from "lucide-react";
+import { resourceLabel } from "@/dashboard/resource-label";
 
 /** OWNER: UI · INTENT_CREATED -> EVALUATED -> RESERVED -> SIGNED -> SETTLED, with timestamps. */
 export function TxTimeline({ transaction }: { transaction: LiveDecisionItem }) {
@@ -47,7 +48,7 @@ export function TxTimeline({ transaction }: { transaction: LiveDecisionItem }) {
             Agent <span className="font-mono font-medium">{transaction.agentName || transaction.agentId}</span> generated intent for <span className="font-mono font-bold">${transaction.amountUsd} USDC</span> to <span className="font-medium">{transaction.merchant}</span>.
           </p>
           <div className="mt-2 text-[11px] font-mono text-zinc-400 bg-zinc-50 p-2 rounded border border-zinc-200 truncate">
-            Resource: {transaction.resource || "POST /api/v1/payment"}
+            Resource: {resourceLabel(transaction.resource)}
           </div>
         </li>
 

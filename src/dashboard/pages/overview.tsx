@@ -159,27 +159,10 @@ export function OverviewPage() {
           setMetrics(data);
         }
       } catch (err) {
-        setMetrics({
-          windowHours: 24,
-          decisions: {
-            allow: 30,
-            hold: 2,
-            block: 8,
-          },
-          spentUsd: "2,007.54",
-          blockedUsd: "2,007.54",
-          onChainTxCount: 30,
-          blockedOnChainTxCount: 0,
-          topBlockReasons: [
-            { code: "ABSOLUTE_BLOCK_THRESHOLD", count: 2 },
-            { code: "PER_TRANSACTION_LIMIT_EXCEEDED", count: 1 },
-            { code: "MERCHANT_NOT_ALLOWLISTED", count: 1 },
-            { code: "MERCHANT_BLOCKED", count: 1 },
-            { code: "RECIPIENT_MISMATCH", count: 1 },
-            { code: "VELOCITY_EXCEEDED", count: 1 },
-          ],
-          p95GuardLatencyMs: 24,
-        });
+        // No invented figures on failure: a fabricated "money protected" number is the one thing
+        // on this page nobody can afford to have made up.
+        console.error("[overview] metrics unavailable:", err);
+        setMetrics(null);
       } finally {
         setLoading(false);
       }
@@ -188,29 +171,17 @@ export function OverviewPage() {
     loadMetrics();
   }, []);
 
-  const allow = metrics?.decisions.allow ?? 30;
-  const hold = metrics?.decisions.hold ?? 2;
-  const block = metrics?.decisions.block ?? 8;
+  // Zero, not a plausible-looking number. Every figure on this page is either measured or absent.
+  const allow = metrics?.decisions.allow ?? 0;
+  const hold = metrics?.decisions.hold ?? 0;
+  const block = metrics?.decisions.block ?? 0;
   const totalDecisions = allow + hold + block;
 
-  const allowPct = totalDecisions > 0 ? Math.round((allow / totalDecisions) * 100) : 75;
-  const holdPct = totalDecisions > 0 ? Math.round((hold / totalDecisions) * 100) : 5;
-  const blockPct = totalDecisions > 0 ? Math.round((block / totalDecisions) * 100) : 20;
+  const allowPct = totalDecisions > 0 ? Math.round((allow / totalDecisions) * 100) : 0;
+  const holdPct = totalDecisions > 0 ? Math.round((hold / totalDecisions) * 100) : 0;
+  const blockPct = totalDecisions > 0 ? Math.round((block / totalDecisions) * 100) : 0;
 
-  // Fallback / standard rules list matching demo reference
-  const standardReasons = [
-    { code: "ABSOLUTE_BLOCK_THRESHOLD", count: 2 },
-    { code: "PER_TRANSACTION_LIMIT_EXCEEDED", count: 1 },
-    { code: "MERCHANT_NOT_ALLOWLISTED", count: 1 },
-    { code: "MERCHANT_BLOCKED", count: 1 },
-    { code: "RECIPIENT_MISMATCH", count: 1 },
-    { code: "VELOCITY_EXCEEDED", count: 1 },
-  ];
-
-  const displayBlockReasons =
-    metrics && metrics.topBlockReasons && metrics.topBlockReasons.length > 0
-      ? metrics.topBlockReasons
-      : standardReasons;
+  const displayBlockReasons = metrics?.topBlockReasons ?? [];
 
   return (
     <div className="relative w-full min-h-screen selection:bg-blue-600 selection:text-white bg-gradient-to-b from-[#1d64c2] via-[#488de8] to-[#7fb5f7] overflow-x-hidden">
@@ -286,7 +257,7 @@ export function OverviewPage() {
                       {/* Number */}
                       <div>
                         <div className="text-3xl sm:text-[34px] font-extrabold text-slate-900 tracking-tight font-sans">
-                          ${metrics?.spentUsd ?? "2,007.54"}
+                          ${metrics?.spentUsd ?? "0.00"}
                         </div>
                         <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                           <span className="text-emerald-600 font-bold">
@@ -346,7 +317,7 @@ export function OverviewPage() {
                       {/* Number */}
                       <div>
                         <div className="text-3xl sm:text-[34px] font-extrabold text-white tracking-tight font-sans">
-                          ${metrics?.blockedUsd ?? "2,007.54"}
+                          ${metrics?.blockedUsd ?? "0.00"}
                         </div>
                         <p className="text-xs text-rose-200/70 mt-1 flex items-center gap-1">
                           Unauthorized spend intercepted before blockchain
@@ -611,16 +582,6 @@ export function OverviewPage() {
                       ))}
                     </div>
 
-                    {/* View All Rules Link */}
-                    <div className="pt-2 text-center border-t border-slate-100">
-                      <Link
-                        href="/policies"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-                      >
-                        <span>View all rules</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
                   </div>
                 </div>
 
