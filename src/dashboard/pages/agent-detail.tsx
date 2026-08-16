@@ -59,10 +59,26 @@ export function AgentDetailPage() {
       try {
         setLoading(true);
         const [agentData, budgetData] = await Promise.all([
-          apiGet<AgentItem>(API.agent(agentId)),
+          apiGet<any>(API.agent(agentId)),
           apiGet<AgentBudgetResponse>(API.budgets(agentId)),
         ]);
-        setAgent(agentData);
+        if (agentData) {
+          setAgent({
+            id: agentData.agentId || agentData.id || "",
+            name: agentData.name || "Agent",
+            description: agentData.description || "",
+            status: agentData.status || "ACTIVE",
+            walletAddress: agentData.wallet?.address ?? agentData.walletAddress ?? "",
+            walletAllowanceCapUsd: agentData.wallet?.allowanceCapUsd ?? agentData.walletAllowanceCapUsd ?? "0.00",
+            walletFundedUsd: agentData.wallet?.fundedUsd ?? agentData.walletFundedUsd ?? "0.00",
+            spentUsd: agentData.spentUsd ?? "0.00",
+            activePolicyId: agentData.activePolicyId ?? "",
+            activePolicyVersion: agentData.activePolicyVersion ?? 0,
+            frozenAt: agentData.frozenAt ?? undefined,
+            frozenReason: agentData.frozenReason ?? undefined,
+            createdAt: agentData.createdAt ?? new Date().toISOString(),
+          });
+        }
         setBudget(budgetData);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load agent");

@@ -31,25 +31,21 @@ interface AgentsApiResponse {
   total: number;
 }
 
-// The card wants a flat shape; CORE groups the wallet. Reading agent.walletAddress off the raw
-// row throws on .slice and takes the whole page down, so the flattening happens here on the way in.
-// spentUsd and activePolicyVersion have no source on this endpoint — they live on
-// /api/v1/budgets/:agentId and /api/v1/policies/:agentId. TODO(UI): fetch them or drop the tiles.
-function toAgentItem(row: AgentRow): AgentItem {
+function toAgentItem(row: any): AgentItem {
   return {
-    id: row.agentId,
-    name: row.name,
-    description: row.description,
-    status: row.status,
-    walletAddress: row.wallet.address,
-    walletAllowanceCapUsd: row.wallet.allowanceCapUsd,
-    walletFundedUsd: row.wallet.fundedUsd,
-    spentUsd: "0.00",
-    activePolicyId: row.activePolicyId,
-    activePolicyVersion: 0,
+    id: row.agentId || row.id || "",
+    name: row.name || "Agent",
+    description: row.description || "",
+    status: row.status || "ACTIVE",
+    walletAddress: row.wallet?.address ?? row.walletAddress ?? "",
+    walletAllowanceCapUsd: row.wallet?.allowanceCapUsd ?? row.walletAllowanceCapUsd ?? "0.00",
+    walletFundedUsd: row.wallet?.fundedUsd ?? row.walletFundedUsd ?? "0.00",
+    spentUsd: row.spentUsd ?? "0.00",
+    activePolicyId: row.activePolicyId ?? "",
+    activePolicyVersion: row.activePolicyVersion ?? 0,
     frozenAt: row.frozenAt ?? undefined,
     frozenReason: row.frozenReason ?? undefined,
-    createdAt: row.createdAt,
+    createdAt: row.createdAt ?? new Date().toISOString(),
   };
 }
 
