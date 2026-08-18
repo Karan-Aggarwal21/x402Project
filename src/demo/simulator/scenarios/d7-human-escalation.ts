@@ -10,12 +10,10 @@ import { PREMIUM_REPORT_EDITIONS } from "@/demo/sandbox/pricing";
 const POLL_INTERVAL_MS = 3_000;
 const APPROVAL_WAIT_MS = 5 * 60_000;
 
+/** GET /api/v1/payments/:id returns { payment: { approval: { status } } } — API_DOCS 5.5. */
 function readApprovalStatus(payload: unknown): string | undefined {
-  // CORE owns the final shape; look one level into `intent` if that is where it lands.
-  if (typeof payload !== "object" || payload === null) return undefined;
-  const data = payload as Record<string, unknown>;
-  const intent = (data.intent ?? data) as Record<string, unknown>;
-  return typeof intent.approvalStatus === "string" ? intent.approvalStatus : undefined;
+  const payment = (payload as { payment?: { approval?: { status?: unknown } } })?.payment;
+  return typeof payment?.approval?.status === "string" ? payment.approval.status : undefined;
 }
 
 async function waitForApproval(intentId: string, log: (line: string) => void): Promise<void> {

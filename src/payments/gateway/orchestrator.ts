@@ -121,10 +121,17 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
   }
 
   const evaluation = await evaluatePayment({ intent, idempotencyKey: input.idempotencyKey });
+
+  // A payment resumed after human approval is judged against the row the reviewer approved, so the
+  // reservation and the tx hash have to land there too — otherwise the approvals queue shows an
+  // approved payment with no settlement, and a second orphan row holds the hash.
+  // The signature still binds the *fresh* quote: intent.intentHash is per-attempt, and must be.
+  const intentId = evaluation.intentId ?? intent.intentId;
+
   if (evaluation.decision !== "ALLOW") {
     return {
       status: evaluation.decision === "HOLD" ? "PENDING_APPROVAL" : "BLOCKED",
-      intentId: intent.intentId,
+      intentId,
       ...target,
       amountUsd: toUsd(intent.amountMinor),
       decision: evaluation.decision,
@@ -138,12 +145,12 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
   // the guard broke when the guard in fact worked. No reservation exists yet, so nothing to release.
   let reservationId: string;
   try {
-    ({ reservationId } = await reserveBudget(agentId, intent.intentId, intent.amountMinor));
+    ({ reservationId } = await reserveBudget(agentId, intentId, intent.amountMinor));
   } catch (error) {
     const failure = failureReason(error);
     return {
       status: "BLOCKED",
-      intentId: intent.intentId,
+      intentId,
       ...target,
       amountUsd: toUsd(intent.amountMinor),
       decision: "BLOCK",
@@ -168,7 +175,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
 
     return {
       status: "SETTLED",
-      intentId: intent.intentId,
+      intentId,
       ...target,
       amountUsd: toUsd(intent.amountMinor),
       decision: "ALLOW",
@@ -188,7 +195,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
     await releaseBudget(reservationId, failure.message);
     return {
       status: "FAILED",
-      intentId: intent.intentId,
+      intentId,
       ...target,
       amountUsd: toUsd(intent.amountMinor),
       decision: "ALLOW",

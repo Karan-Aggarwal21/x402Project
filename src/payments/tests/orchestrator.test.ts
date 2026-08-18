@@ -225,3 +225,47 @@ describe("runGuardedRequest — every failure path releases the reservation", ()
     expect(forward.forwardToMerchant).toHaveBeenCalledOnce();
   });
 });
+
+// A payment held for human review is judged again on the retry, and CORE answers with the id of the
+// row the reviewer approved. Everything the gateway writes has to follow that id: put the
+// reservation or the tx hash on the fresh intent instead and the approvals queue shows an approved
+// payment that never settled, next to an orphan row holding the hash.
+describe("runGuardedRequest — resumed after human approval", () => {
+  const APPROVED_INTENT_ID = "int_approved_by_a_human";
+
+  beforeEach(() => {
+    core.evaluatePayment.mockResolvedValue({ ...ALLOW, intentId: APPROVED_INTENT_ID });
+  });
+
+  it("reserves and reports against the approved intent, not the retry's own", async () => {
+    merchantReplies(quoted, settled);
+
+    const result = await runGuardedRequest({ ...REQUEST, idempotencyKey: APPROVED_INTENT_ID });
+
+    expect(result.status).toBe("SETTLED");
+    expect(result.intentId).toBe(APPROVED_INTENT_ID);
+    // commitBudget stamps the tx hash by way of the reservation, so this is what puts the hash on
+    // the approved row.
+    expect(core.reserveBudget).toHaveBeenCalledWith("agt_researchbot", APPROVED_INTENT_ID, 10_000n);
+  });
+
+  it("carries the approved id onto a failure too, so the release is traceable to it", async () => {
+    merchantReplies(quoted, () => new Response("gone", { status: 503 }));
+
+    const result = await runGuardedRequest({ ...REQUEST, idempotencyKey: APPROVED_INTENT_ID });
+
+    expect(result.status).toBe("FAILED");
+    expect(result.intentId).toBe(APPROVED_INTENT_ID);
+    expect(core.releaseBudget).toHaveBeenCalledOnce();
+  });
+
+  it("still uses the gateway's own intent when CORE names no other", async () => {
+    core.evaluatePayment.mockResolvedValue(ALLOW);
+    merchantReplies(quoted, settled);
+
+    const result = await runGuardedRequest(REQUEST);
+
+    expect(result.intentId).toMatch(/^int_/);
+    expect(core.reserveBudget).toHaveBeenCalledWith("agt_researchbot", result.intentId, 10_000n);
+  });
+});
