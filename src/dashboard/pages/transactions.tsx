@@ -25,6 +25,10 @@ interface TransactionsApiResponse {
   total: number;
 }
 
+interface AgentsApiResponse {
+  agents: { agentId: string; name: string }[];
+}
+
 export function TransactionsPage() {
   const [transactions, setTransactions] = useState<LiveDecisionItem[]>([]);
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
@@ -36,11 +40,19 @@ export function TransactionsPage() {
         setLoading(true);
         // Money protected is measured over the guard's window by CORE, so it comes from the
         // metrics endpoint rather than being derived from whichever page of rows loaded here.
-        const [data, summary] = await Promise.all([
+        // The transactions endpoint returns agentId, not the name, so the roster is fetched once
+        // and joined here. A failure leaves agentName undefined and the table falls back to the id,
+        // which is the point: a row must never display an agent it cannot actually identify.
+        const [data, summary, roster] = await Promise.all([
           apiGet<TransactionsApiResponse>(API.transactions),
           apiGet<MetricsSummary>(API.metrics).catch(() => null),
+          apiGet<AgentsApiResponse>(API.agents).catch(() => null),
         ]);
-        setTransactions((data?.transactions ?? []).map(toFeedItem));
+        const names = new Map((roster?.agents ?? []).map((agent) => [agent.agentId, agent.name]));
+        setTransactions((data?.transactions ?? []).map((row) => ({
+          ...toFeedItem(row),
+          agentName: names.get(row.agentId),
+        })));
         setMetrics(summary);
       } catch (err) {
         console.error("[transactions] load failed:", err);

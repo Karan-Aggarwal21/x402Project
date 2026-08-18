@@ -223,7 +223,7 @@ export function TxTable({
                       <td className="py-3.5 px-5 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs">
                           <Bot className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                          <span>{t.agentName || (t.agentId === "agent_researchbot" ? "ResearchBot" : "DataBot")}</span>
+                          <span>{t.agentName || t.agentId}</span>
                         </span>
                       </td>
 

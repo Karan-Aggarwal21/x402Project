@@ -63,6 +63,49 @@ function policyRules(overrides: Partial<PolicyRules> = {}): PolicyRules {
   };
 }
 
+/**
+ * Real Algorand TestNet settlements, captured from live D1 and D7 runs on 2026-08-18.
+ *
+ * Every field here matches what the chain returns, so a judge who follows the Lora link finds the
+ * same amount, asset and recipient as the row they clicked. Re-verify any of them with:
+ *
+ *   curl https://testnet-idx.algonode.cloud/v2/transactions/<txHash>
+ *
+ * TestNet transactions are not pruned, so these stay resolvable. They are the only rows in this
+ * file with a transaction id — every other settled row carries null, on purpose. See the note on
+ * the settled-history loop below.
+ */
+const REAL_SETTLEMENTS = [
+  {
+    txHash: "VBVQI62FJLS45GFVKWZUMOW5V24G3TTSTNU743IZWVR7KE2E7IWQ",
+    round: 66438771, usd: "0.02", resource: "POST /api/sandbox/search",
+    reason: "search for x402 adoption data", at: "2026-08-18T18:03:35.000Z", risk: 5,
+  },
+  {
+    txHash: "KNIIJ33OTCGZULYCDGPE3XLRK73EU44YMKLJZREQEINWYIRZA5OA",
+    round: 66439296, usd: "0.02", resource: "POST /api/sandbox/search",
+    reason: "search for battery recycling capacity", at: "2026-08-18T18:27:13.000Z", risk: 7,
+  },
+  {
+    txHash: "62JX7DXGGEHE22OWH576G4N3HYYXLI3Y7UK3642M5UAF4SOCM7GQ",
+    round: 66439387, usd: "0.02", resource: "POST /api/sandbox/search",
+    reason: "search for x402 facilitator coverage", at: "2026-08-18T18:31:19.000Z", risk: 6,
+  },
+] as const;
+
+/**
+ * The D7 lifecycle, complete and on chain: quoted at $0.50, held for review, approved by a human,
+ * then settled. The approvals queue only lists PENDING rows, so this one does not clutter it — it
+ * exists so the transaction detail page has one finished human-in-the-loop payment to show.
+ */
+const REAL_APPROVED_SETTLEMENT = {
+  txHash: "F6WFCGDU6ZKEC6X7C27W2JVB2YCKFPLBVGI4HI2FTGOOWWJDVLSA",
+  round: 66439520, usd: "0.50", resource: "POST /api/sandbox/premium-report",
+  reason: "buy the analyst-edition market report",
+  at: "2026-08-18T18:37:19.000Z", risk: 45,
+  reviewerEmail: "reviewer@aspg.test", note: "verified with the vendor",
+} as const;
+
 function hashKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
 }
@@ -244,9 +287,13 @@ async function main() {
         state: "SETTLED", decision: "ALLOW", policyVersion: 3, reasons: [],
         matchedRules: ["financial.maxPerTransactionUsd", "merchant.allowedMerchants"],
         riskScore: 5 + (i % 12), riskSignals: [], latencyMs: 18 + (i % 20),
-        // Synthetic: shaped like an Algorand transaction id but not on chain, so this link 404s
-        // on Lora. The clickable proof in the demo is a live D1 payment, never a seeded row.
-        txHash: base32Shaped(`tx${i}`, 52),
+        // No transaction id. These rows exist to give the dashboard realistic shapes — amounts,
+        // resources, risk scores, latencies — and none of them happened on chain. A synthetic id
+        // would be the right length and the wrong answer: the UI renders any id as a working
+        // explorer link, and every one of them 404s. "Transaction not found" on the history page
+        // reads as "these payments are fake", which is the one thing the demo cannot afford.
+        // The four REAL_SETTLEMENTS above carry ids, and they resolve.
+        txHash: null,
         settledAt: at, createdAt: at, updatedAt: at,
       },
       "PAYMENT_SETTLED",
@@ -277,7 +324,7 @@ async function main() {
         intentHash: createHash("sha256").update(`${intentId}budget`).digest("hex"),
         state: "SETTLED", decision: "ALLOW", policyVersion: 1, reasons: [],
         matchedRules: ["financial.budgets"], riskScore: 8 + i, riskSignals: [], latencyMs: 16 + i,
-        txHash: base32Shaped(`budgettx${i}`, 52),
+        txHash: null,   // shape data, not a settlement — see the note on the loop above
         settledAt: at, createdAt: at, updatedAt: at,
       },
       "PAYMENT_SETTLED",
@@ -308,7 +355,7 @@ async function main() {
         intentHash: createHash("sha256").update(`${intentId}velocity`).digest("hex"),
         state: "SETTLED", decision: "ALLOW", policyVersion: 1, reasons: [],
         matchedRules: ["velocity"], riskScore: 6 + i, riskSignals: [], latencyMs: 14 + i,
-        txHash: base32Shaped(`velocitytx${i}`, 52),
+        txHash: null,   // shape data, not a settlement — see the note on the loop above
         settledAt: at, createdAt: at, updatedAt: at,
       },
       "PAYMENT_SETTLED",
@@ -379,6 +426,73 @@ async function main() {
     );
   });
 
+  // The only rows in this seed whose explorer links resolve. Dated from the chain itself, which
+  // puts them at the top of the transactions list — the first thing anyone clicks.
+  for (const settlement of REAL_SETTLEMENTS) {
+    const at = new Date(settlement.at);
+    const intentId = newId("intent");
+    const amountMinor = toMinor(settlement.usd);
+    pushIntent(
+      {
+        id: intentId, agentId: researchBotId, amountMinor, asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
+        recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: settlement.resource,
+        reason: settlement.reason, nonce: `nonce_real_${settlement.round}`,
+        intentHash: createHash("sha256").update(`${intentId}${settlement.txHash}`).digest("hex"),
+        state: "SETTLED", decision: "ALLOW", policyVersion: 3, reasons: [],
+        matchedRules: ["financial.maxPerTransactionUsd", "merchant.allowedMerchants"],
+        riskScore: settlement.risk, riskSignals: [], latencyMs: 19,
+        txHash: settlement.txHash,
+        settledAt: at, createdAt: at, updatedAt: at,
+      },
+      "PAYMENT_SETTLED",
+      { amountUsd: settlement.usd, merchant: SANDBOX, round: settlement.round },
+    );
+
+    const reservationId = newId("reservation");
+    for (const entryType of ["RESERVE", "COMMIT"] as const) {
+      ledger.push({
+        id: newId("ledger"), agentId: researchBotId, intentId, reservationId,
+        entryType, amountMinor, ...windowKeys(at), createdAt: at,
+      });
+    }
+  }
+
+  {
+    const settlement = REAL_APPROVED_SETTLEMENT;
+    const at = new Date(settlement.at);
+    // Held a couple of minutes before it settled, which is how long the reviewer took.
+    const heldAt = new Date(at.getTime() - 2 * 60_000);
+    const intentId = newId("intent");
+    const amountMinor = toMinor(settlement.usd);
+    pushIntent(
+      {
+        id: intentId, agentId: researchBotId, amountMinor, asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
+        recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: settlement.resource,
+        reason: settlement.reason, nonce: `nonce_real_${settlement.round}`,
+        intentHash: createHash("sha256").update(`${intentId}${settlement.txHash}`).digest("hex"),
+        state: "SETTLED", decision: "ALLOW", policyVersion: 3, reasons: [],
+        matchedRules: ["risk.holdBetweenUsd"], riskScore: settlement.risk, riskSignals: [], latencyMs: 23,
+        approvalStatus: "APPROVED",
+        approvalReviewerEmail: settlement.reviewerEmail,
+        approvalNote: settlement.note,
+        approvalExpiresAt: new Date(heldAt.getTime() + 15 * 60_000),
+        approvalActionedAt: at,
+        txHash: settlement.txHash,
+        settledAt: at, createdAt: heldAt, updatedAt: at,
+      },
+      "PAYMENT_SETTLED",
+      { amountUsd: settlement.usd, merchant: SANDBOX, round: settlement.round, approvedBy: settlement.reviewerEmail },
+    );
+
+    const reservationId = newId("reservation");
+    for (const entryType of ["RESERVE", "COMMIT"] as const) {
+      ledger.push({
+        id: newId("ledger"), agentId: researchBotId, intentId, reservationId,
+        entryType, amountMinor, ...windowKeys(at), createdAt: at,
+      });
+    }
+  }
+
   await db.insert(schema.paymentIntents).values(intents);
   await db.insert(schema.budgetLedger).values(ledger);
 
@@ -398,6 +512,7 @@ async function main() {
   console.log(`ResearchBot api key: gk_live_researchbot_demo`);
   console.log(`BudgetBot api key:   gk_live_budgetbot_demo    (budget already at 100% — demo D5)`);
   console.log(`VelocityBot api key: gk_live_velocitybot_demo  (clean history for the burst — demo D3)`);
+  console.log(`on-chain: ${REAL_SETTLEMENTS.length + 1} rows carry a real TestNet transaction id; every other settled row carries null`);
   process.exit(0);
 }
 
