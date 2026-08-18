@@ -4,7 +4,7 @@
  * DOCS: PRD.md section 5.2 (defaults column)
  */
 import type { PolicyRules } from "@/shared/types";
-import { BASE_SEPOLIA_NETWORK_ID, BASE_SEPOLIA_USDC_ADDRESS } from "@/shared/env";
+import { ALGORAND_TESTNET_NETWORK_ID, ALGORAND_TESTNET_USDC_ASA } from "@/shared/env";
 
 export const CONSERVATIVE: PolicyRules = {
   // maxPerTransactionUsd must clear the top of holdBetweenUsd. Set it below the band and rule 6
@@ -18,7 +18,7 @@ export const CONSERVATIVE: PolicyRules = {
     enforceRecipientPinning: true,
   },
   velocity: { maxTxPerMinute: 10, maxTxPerHour: 100, maxTxPerMerchantPerMinute: 5 },
-  rail: { allowedNetworks: [BASE_SEPOLIA_NETWORK_ID], allowedAssets: [BASE_SEPOLIA_USDC_ADDRESS] },
+  rail: { allowedNetworks: [ALGORAND_TESTNET_NETWORK_ID], allowedAssets: [ALGORAND_TESTNET_USDC_ASA] },
   risk: { autoApproveBelowUsd: "0.10", holdBetweenUsd: ["0.10", "1.00"], blockAboveUsd: "1.00", riskHoldScore: 30, riskBlockScore: 60 },
 };
 

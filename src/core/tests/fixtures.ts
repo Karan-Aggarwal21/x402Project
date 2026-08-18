@@ -1,7 +1,7 @@
 // OWNER: CORE. Test contexts for the pure engine. Values mirror src/core/db/seed.ts so a failing
 // test reads like the demo it protects. Overrides merge one level deep, exactly like the seed's own helper.
 import { toMinor } from "@/shared/money";
-import { BASE_SEPOLIA_NETWORK_ID, BASE_SEPOLIA_USDC_ADDRESS } from "@/shared/env";
+import { ALGORAND_TESTNET_NETWORK_ID, ALGORAND_TESTNET_USDC_ASA } from "@/shared/env";
 import type {
   EvaluationContext,
   PaymentIntent,
@@ -31,7 +31,7 @@ export function makePolicyRules(overrides: Partial<PolicyRules> = {}): PolicyRul
       enforceRecipientPinning: true,
     },
     velocity: { maxTxPerMinute: 10, maxTxPerHour: 100, maxTxPerMerchantPerMinute: 5 },
-    rail: { allowedNetworks: [BASE_SEPOLIA_NETWORK_ID], allowedAssets: [BASE_SEPOLIA_USDC_ADDRESS] },
+    rail: { allowedNetworks: [ALGORAND_TESTNET_NETWORK_ID], allowedAssets: [ALGORAND_TESTNET_USDC_ASA] },
     risk: {
       autoApproveBelowUsd: "0.10",
       holdBetweenUsd: ["0.10", "1.00"],
@@ -60,8 +60,8 @@ export function makeIntent(overrides: Partial<PaymentIntent> = {}): PaymentInten
     intentId: "int_01TESTTESTTESTTESTTESTTEST",
     agentId: "agt_01TESTTESTTESTTESTTESTTEST",
     amountMinor: toMinor("0.02"),
-    asset: BASE_SEPOLIA_USDC_ADDRESS,
-    network: BASE_SEPOLIA_NETWORK_ID,
+    asset: ALGORAND_TESTNET_USDC_ASA,
+    network: ALGORAND_TESTNET_NETWORK_ID,
     recipient: MERCHANT_WALLET,
     merchant: SANDBOX,
     resource: "POST /api/sandbox/search",

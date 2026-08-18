@@ -50,7 +50,7 @@ interface TransactionsApiResponse {
 }
 
 // Normalised at the one place rows enter, so every consumer of the hook sees one shape. Without
-// this a settled payment renders with no BaseScan link — the proof the whole demo rests on.
+// this a settled payment renders with no explorer link — the proof the whole demo rests on.
 export function toFeedItem(row: TransactionRow): LiveDecisionItem {
   return {
     ...row,

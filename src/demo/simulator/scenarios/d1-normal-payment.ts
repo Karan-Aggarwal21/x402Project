@@ -1,9 +1,7 @@
-// OWNER: DEMO · One $0.02 search. EXPECT: ALLOW + a real tx hash on Base Sepolia.
+// OWNER: DEMO · One $0.02 search. EXPECT: ALLOW + a real transaction id on Algorand TestNet.
 import { guardedFetch } from "@/demo/agent/guardedFetch";
 import { TOOL_ENDPOINTS } from "@/demo/agent/tools";
 import { PRICING } from "@/demo/sandbox/pricing";
-
-const EXPLORER = "https://sepolia.basescan.org/tx/";
 
 export async function run(log: (line: string) => void = console.log): Promise<void> {
   const url = TOOL_ENDPOINTS.search;
@@ -22,6 +20,6 @@ export async function run(log: (line: string) => void = console.log): Promise<vo
   const data = result.data as { results?: unknown[] } | undefined;
   log(`[D1] ALLOW — received ${data?.results?.length ?? 0} search results`);
   log(`[D1] txHash: ${result.txHash}`);
-  log(`[D1] proof: ${EXPLORER}${result.txHash}`);
+  log(`[D1] proof: ${result.explorerUrl ?? "(no explorer for this rail)"}`);
   log(`[D1] attempted $${priceUsd}, spent $${priceUsd}`);
 }

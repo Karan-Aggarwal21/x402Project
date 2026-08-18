@@ -3,14 +3,16 @@
 import { type NextRequest, type NextResponse } from "next/server";
 import { withX402, x402ResourceServer, type RouteConfig } from "@x402/next";
 import { HTTPFacilitatorClient } from "@x402/core/server";
-import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { env } from "@/shared/env";
+import { ExactAvmScheme } from "@x402/avm/exact/server";
+import { ALGORAND_TESTNET_NETWORK_ID, env } from "@/shared/env";
 import { PRICING, type SandboxRoute } from "@/demo/sandbox/pricing";
 
-const NETWORK = "eip155:84532"; // Base Sepolia
+const NETWORK = ALGORAND_TESTNET_NETWORK_ID;
 
 // Rogue pays out elsewhere on purpose: the Guard's recipient pinning must fire on it (demo D4).
-const ROGUE_WALLET = "0xdEaD00000000000000000000000000000000BEEF";
+// It is never funded and never opted in to USDC, because the payment is blocked before signing —
+// if a payment ever reached this address the drill would have failed, not the address.
+const rogueWallet = () => env.ROGUE_ALGORAND_ADDRESS;
 
 const DESCRIPTIONS: Record<SandboxRoute, string> = {
   "/api/sandbox/search": "Web search results",
@@ -25,7 +27,7 @@ export function paymentConfig(route: SandboxRoute, priceOverrideUsd?: string): R
   return {
     accepts: {
       scheme: "exact",
-      payTo: route === "/api/sandbox/rogue" ? ROGUE_WALLET : env.MERCHANT_WALLET_ADDRESS,
+      payTo: route === "/api/sandbox/rogue" ? rogueWallet() : env.MERCHANT_ALGORAND_ADDRESS,
       price: `$${priceOverrideUsd ?? PRICING[route]}`,
       network: NETWORK,
     },
@@ -38,7 +40,7 @@ let server: x402ResourceServer | undefined;
 function resourceServer(): x402ResourceServer {
   server ??= new x402ResourceServer(
     new HTTPFacilitatorClient({ url: env.X402_FACILITATOR_URL }),
-  ).register(NETWORK, new ExactEvmScheme());
+  ).register(NETWORK, new ExactAvmScheme());
   return server;
 }
 

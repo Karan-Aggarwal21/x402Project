@@ -47,7 +47,7 @@ const SCENARIOS: Scenario[] = [
     category: "HAPPY_PATH",
     description: "ResearchBot requests $0.02 search API from allowlisted localhost:3000.",
     intentPreview: "Web search — $0.02 USDC",
-    highlightProof: "Zero-latency guard evaluation (~0.055ms) and genuine Base Sepolia on-chain settlement.",
+    highlightProof: "Zero-latency guard evaluation (~0.055ms) and genuine Algorand TestNet on-chain settlement.",
   },
   {
     id: "D2",
@@ -185,7 +185,7 @@ export function SimulatorPage() {
               </h2>
             </div>
             <p className="text-sm text-slate-500 mt-1 max-w-2xl">
-              One-click live execution harness streaming genuine Guard decisions, BaseScan settlement links, and zero-gas interception proofs directly to judges in real time.
+              One-click live execution harness streaming genuine Guard decisions, Lora settlement links, and zero-gas interception proofs directly to judges in real time.
             </p>
           </div>
 

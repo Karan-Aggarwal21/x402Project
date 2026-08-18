@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { resourceLabel } from "@/dashboard/resource-label";
+import { explorerName, explorerTxUrl, networkLabel } from "@/shared/explorer";
 
 interface TxDetailDrawerProps {
   tx: LiveDecisionItem | null;
@@ -150,18 +151,18 @@ export function TxDetailDrawer({ tx, isOpen, onClose }: TxDetailDrawerProps) {
               <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-xs space-y-2">
                 <div className="flex items-center gap-2 text-emerald-900 font-bold">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>SETTLED ON-CHAIN (Base Sepolia)</span>
+                  <span>SETTLED ON-CHAIN ({networkLabel(tx.network)})</span>
                 </div>
                 <p className="text-emerald-800/90 font-mono text-[11px] truncate">
                   Tx: {tx.txHash}
                 </p>
                 <a
-                  href={`https://sepolia.basescan.org/tx/${tx.txHash}`}
+                  href={explorerTxUrl(tx.network, tx.txHash) ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline pt-1"
                 >
-                  <span>View on BaseScan Explorer</span>
+                  <span>View on {explorerName(tx.network)} Explorer</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>
@@ -276,9 +277,9 @@ export function TxDetailDrawer({ tx, isOpen, onClose }: TxDetailDrawerProps) {
                     </div>
                     <div className="text-[11px] text-slate-400">
                       {isAllow
-                        ? "EVM signature generated & broadcast to Base Sepolia"
+                        ? `Signed and broadcast to ${networkLabel(tx.network)}`
                         : isBlock
-                        ? "Request rejected without touching EVM RPC"
+                        ? "Request rejected before anything was signed"
                         : "Escalated to human reviewer HOLD queue"}
                     </div>
                   </div>

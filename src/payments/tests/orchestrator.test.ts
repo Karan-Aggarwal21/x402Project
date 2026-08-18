@@ -3,9 +3,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 process.env.GUARD_HMAC_SECRET ??= "test-only-secret";
-process.env.AGENT_WALLET_PRIVATE_KEY ??= "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+process.env.AVM_PRIVATE_KEY ??= "ASdQfaLIBs5ujxlKf1HO3mkzmIl+I1T+9Yn1rDLCsYHXjURdAvI/9C5cv4PcpdNh63PdwRauu6Y06IKqBfvAJg==";
 
-import { CAPTURED_REQUIRED, CAPTURED_RESPONSE, SETTLED_TX_HASH, asHeader } from "@/payments/tests/fixtures";
+/** Structural, so it needs no import inside the hoisted block. Enough to assert what was signed. */
+type SignedOffer = { accepts: Array<{ payTo: string; amount: string; network: string }> };
+const adapterStub = vi.hoisted(() => ({
+  createPaymentSignature: vi.fn<(paymentRequired: SignedOffer, signer: unknown) => Promise<string>>(
+    async () => "c3R1Yi1zaWduYXR1cmU=",
+  ),
+}));
+vi.mock("@/payments/x402/adapter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/payments/x402/adapter")>()),
+  createPaymentSignature: adapterStub.createPaymentSignature,
+}));
+
+import {
+  AVM_CAPTURED_REQUIRED,
+  AVM_CAPTURED_RESPONSE,
+  AVM_SETTLED_TX_ID,
+  CAPTURED_REQUIRED,
+  CAPTURED_RESPONSE,
+  SETTLED_TX_HASH,
+  asHeader,
+} from "@/payments/tests/fixtures";
 import { HEADER } from "@/payments/x402/headers";
 import type { EvaluationResult } from "@/shared/types";
 
@@ -31,6 +51,13 @@ const ALLOW: EvaluationResult = {
 const REQUEST = { agentId: "agt_researchbot", url: "http://localhost:3001/api/gw/poc-seller", method: "POST" };
 
 const quoted = () => new Response(null, { status: 402, headers: { [HEADER.required]: CAPTURED_REQUIRED } });
+
+// The Algorand capture, served from the host its resource.url names so the signer's merchant
+// check agrees. Used by the rail test below; the rest stay on the EVM capture on purpose, to keep
+// proving that none of the guard's checks depend on which chain the money moves over.
+const AVM_REQUEST = { agentId: "agt_researchbot", url: "https://x402.goplausible.xyz/examples/weather", method: "GET" };
+const avmQuoted = () => new Response(null, { status: 402, headers: { [HEADER.required]: AVM_CAPTURED_REQUIRED } });
+const avmSettled = () => new Response(JSON.stringify({ forecast: {} }), { status: 200, headers: { [HEADER.response]: AVM_CAPTURED_RESPONSE } });
 const settled = () => new Response(JSON.stringify({ results: [] }), { status: 200, headers: { [HEADER.response]: CAPTURED_RESPONSE } });
 
 /** First call is the unpaid probe, second is the paid retry. */
@@ -82,6 +109,21 @@ describe("runGuardedRequest — happy path", () => {
     expect(result.status).toBe("FAILED");
     expect(result.reasons[0].code).toBe("UPSTREAM_UNAVAILABLE");
     expect(core.reserveBudget).not.toHaveBeenCalled();
+  });
+});
+
+describe("runGuardedRequest — Algorand rail", () => {
+  it("settles and links the transaction to Lora, not to a Base explorer", async () => {
+    merchantReplies(avmQuoted, avmSettled);
+
+    const result = await runGuardedRequest(AVM_REQUEST);
+
+    expect(result.status).toBe("SETTLED");
+    expect(result.onChain).toEqual({ signed: true, txHash: AVM_SETTLED_TX_ID });
+    // A BaseScan link for an Algorand transaction renders as "not found", which reads to a judge
+    // as a failed payment. Wrong explorer is worse than no explorer.
+    expect(result.payment?.explorerUrl).toBe(`https://lora.algokit.io/testnet/transaction/${AVM_SETTLED_TX_ID}`);
+    expect(core.commitBudget).toHaveBeenCalledOnce();
   });
 });
 

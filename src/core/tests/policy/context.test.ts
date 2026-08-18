@@ -2,7 +2,7 @@
 // decision — engine.test.ts covers that — but that it is recorded before it returns, and that every
 // failure path is a BLOCK. Needs a real Postgres.
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { BASE_SEPOLIA_NETWORK_ID, BASE_SEPOLIA_USDC_ADDRESS } from "@/shared/env";
+import { ALGORAND_TESTNET_NETWORK_ID, ALGORAND_TESTNET_USDC_ASA } from "@/shared/env";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -26,8 +26,8 @@ function makeIntent(overrides: Partial<PaymentIntent> = {}): PaymentIntent {
     intentId,
     agentId,
     amountMinor: toMinor("0.02"),
-    asset: BASE_SEPOLIA_USDC_ADDRESS,
-    network: BASE_SEPOLIA_NETWORK_ID,
+    asset: ALGORAND_TESTNET_USDC_ASA,
+    network: ALGORAND_TESTNET_NETWORK_ID,
     recipient: MERCHANT_WALLET,
     merchant: SANDBOX,
     resource: "POST /api/sandbox/search",

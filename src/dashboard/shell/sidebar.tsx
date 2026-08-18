@@ -74,7 +74,7 @@ export function Sidebar() {
       <div className="p-4 border-t border-slate-800 text-xs text-slate-400 space-y-2 bg-slate-950/40">
         <div className="flex items-center justify-between">
           <span className="text-slate-500">Network</span>
-          <span className="font-mono text-slate-300 font-medium">Base Sepolia</span>
+          <span className="font-mono text-slate-300 font-medium">Algorand TestNet</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-slate-500">Guard Mode</span>
