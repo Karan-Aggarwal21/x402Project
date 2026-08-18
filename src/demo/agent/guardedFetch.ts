@@ -18,9 +18,15 @@ export interface GuardedOptions {
   maxAmountUsd?: string;
   // Ties a post-approval retry to the held intent (D7).
   idempotencyKey?: string;
+  // Which agent is paying. Defaults to ResearchBot; D5 is the only caller that differs.
+  guardKey?: string;
 }
 
 const GUARD_KEY = "gk_live_researchbot_demo";
+/** Seeded with its hourly allowance already spent, so its next payment is refused. Demo D5. */
+export const BUDGET_EXHAUSTED_GUARD_KEY = "gk_live_budgetbot_demo";
+/** Seeded with a clean recent history, so a burst measures the velocity limit and nothing else. */
+export const BURST_GUARD_KEY = "gk_live_velocitybot_demo";
 const GUARD_KEY_HEADER = "X-Guard-Key";
 
 const successEnvelope = z.object({
@@ -62,7 +68,7 @@ export async function guardedFetch(
   try {
     response = await fetch(`${env.APP_URL}/api/gw/request`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", [GUARD_KEY_HEADER]: GUARD_KEY },
+      headers: { "Content-Type": "application/json", [GUARD_KEY_HEADER]: options?.guardKey ?? GUARD_KEY },
       body: JSON.stringify({
         url: target,
         method: "POST",

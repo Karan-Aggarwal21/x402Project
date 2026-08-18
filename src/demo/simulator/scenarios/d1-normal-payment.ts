@@ -2,11 +2,14 @@
 import { guardedFetch } from "@/demo/agent/guardedFetch";
 import { TOOL_ENDPOINTS } from "@/demo/agent/tools";
 import { PRICING } from "@/demo/sandbox/pricing";
+import { waitForVelocityHeadroom } from "@/demo/simulator/velocity";
 
 export async function run(log: (line: string) => void = console.log): Promise<void> {
   const url = TOOL_ENDPOINTS.search;
   const priceUsd = PRICING[url];
-  log(`[D1] POST ${url} ($${priceUsd}) — expect ALLOW + tx hash`);
+  // A scenario that ran seconds ago may still be holding the velocity window.
+  await waitForVelocityHeadroom(1, log);
+  log(`[D1] POST ${url} (${priceUsd}) — expect ALLOW + tx hash`);
 
   const result = await guardedFetch(url, { query: "x402 adoption data 2026" }, "D1: search for x402 adoption data");
 

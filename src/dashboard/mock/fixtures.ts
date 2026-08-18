@@ -1,7 +1,7 @@
 /**
  * OWNER: UI
  * WHAT: Response fixtures mirroring the seeded database shapes and API_DOCS.md.
- *       30 settled, 8 blocked, 2 held, 2 agents, 3 policy versions on ResearchBot.
+ *       30 settled, 8 blocked, 2 held, 4 agents, 3 policy versions on ResearchBot.
  */
 
 export const metricsSummary = {

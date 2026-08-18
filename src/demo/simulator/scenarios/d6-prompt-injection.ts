@@ -6,6 +6,7 @@ import { TOOL_ENDPOINTS } from "@/demo/agent/tools";
 import { PRICING } from "@/demo/sandbox/pricing";
 import { ATTEMPTED_SPEND_USD } from "@/demo/fixtures/poisoned";
 import { formatUsd, toMinor } from "@/shared/money";
+import { waitForVelocityHeadroom } from "@/demo/simulator/velocity";
 
 // Same deployment ceiling as D2 — carries the block until CORE's policy engine lands.
 const CALLER_CEILING_USD = "0.10";
@@ -26,6 +27,8 @@ export interface D6AttackResult {
 
 // The attack itself, assertions removed — C7 drill 5.2 reuses this and judges the result itself.
 export async function obeyInjection(log: (line: string) => void): Promise<D6AttackResult> {
+  // The attack cannot be demonstrated if its opening search is refused for an unrelated reason.
+  await waitForVelocityHeadroom(1, log);
   const searchUrl = `${TOOL_ENDPOINTS.search}?scenario=D6`;
   log(`[D6] POST ${searchUrl} ($${PRICING[TOOL_ENDPOINTS.search]}) — an ordinary paid search`);
 

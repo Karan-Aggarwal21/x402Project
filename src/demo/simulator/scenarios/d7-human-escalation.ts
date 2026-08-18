@@ -6,16 +6,15 @@ import { env } from "@/shared/env";
 import { guardedFetch } from "@/demo/agent/guardedFetch";
 import { TOOL_ENDPOINTS } from "@/demo/agent/tools";
 import { PREMIUM_REPORT_EDITIONS } from "@/demo/sandbox/pricing";
+import { waitForVelocityHeadroom } from "@/demo/simulator/velocity";
 
 const POLL_INTERVAL_MS = 3_000;
 const APPROVAL_WAIT_MS = 5 * 60_000;
 
+/** GET /api/v1/payments/:id returns { payment: { approval: { status } } } — API_DOCS 5.5. */
 function readApprovalStatus(payload: unknown): string | undefined {
-  // CORE owns the final shape; look one level into `intent` if that is where it lands.
-  if (typeof payload !== "object" || payload === null) return undefined;
-  const data = payload as Record<string, unknown>;
-  const intent = (data.intent ?? data) as Record<string, unknown>;
-  return typeof intent.approvalStatus === "string" ? intent.approvalStatus : undefined;
+  const payment = (payload as { payment?: { approval?: { status?: unknown } } })?.payment;
+  return typeof payment?.approval?.status === "string" ? payment.approval.status : undefined;
 }
 
 async function waitForApproval(intentId: string, log: (line: string) => void): Promise<void> {
@@ -37,7 +36,9 @@ export async function run(log: (line: string) => void = console.log): Promise<vo
   const url = `${TOOL_ENDPOINTS.premiumReport}?edition=analyst`;
   const priceUsd = PREMIUM_REPORT_EDITIONS.analyst;
   const body = { topic: "EV battery recycling market", edition: "analyst" };
-  log(`[D7] POST ${url} ($${priceUsd}) — inside the hold band, expect HOLD`);
+  // Two against the window: a HOLD counts the same as an ALLOW, and then the resume settles.
+  await waitForVelocityHeadroom(2, log);
+  log(`[D7] POST ${url} (${priceUsd}) — inside the hold band, expect HOLD`);
 
   const held = await guardedFetch(url, body, "D7: buy the analyst-edition report");
   if (held.ok) {
