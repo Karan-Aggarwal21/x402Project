@@ -88,6 +88,8 @@ async function main() {
 
   const researchBotId = newId("agent");
   const dataBotId = newId("agent");
+  const budgetBotId = newId("agent");
+  const velocityBotId = newId("agent");
 
   await db.insert(schema.agents).values([
     {
@@ -114,6 +116,28 @@ async function main() {
       frozenReason: "Velocity limit tripped 3 times in 5 minutes.",
       createdAt: minutesAgo(540),
     },
+    {
+      id: budgetBotId,
+      name: "BudgetBot",
+      description: "Metered reporting agent. Has already spent its entire hourly allowance.",
+      status: "ACTIVE",
+      apiKeyHash: hashKey("gk_live_budgetbot_demo"),
+      walletAddress: AGENT_WALLET,
+      walletAllowanceCapMinor: toMinor("25.00"),
+      walletFundedMinor: toMinor("10.00"),
+      createdAt: minutesAgo(300),
+    },
+    {
+      id: velocityBotId,
+      name: "VelocityBot",
+      description: "High-frequency search agent. Kept separate so burst tests start from a clean history.",
+      status: "ACTIVE",
+      apiKeyHash: hashKey("gk_live_velocitybot_demo"),
+      walletAddress: AGENT_WALLET,
+      walletAllowanceCapMinor: toMinor("25.00"),
+      walletFundedMinor: toMinor("10.00"),
+      createdAt: minutesAgo(420),
+    },
   ]);
 
   // Three versions on ResearchBot so the version-history UI has something real to diff.
@@ -121,6 +145,8 @@ async function main() {
   const v2 = newId("policy");
   const v3 = newId("policy");
   const dataBotPolicyId = newId("policy");
+  const budgetBotPolicyId = newId("policy");
+  const velocityBotPolicyId = newId("policy");
 
   const v1Rules = policyRules({
     financial: { maxPerTransactionUsd: "0.05", hourlyBudgetUsd: "0.50", dailyBudgetUsd: "2.00", monthlyBudgetUsd: "20.00" },
@@ -131,6 +157,14 @@ async function main() {
   const v3Rules = policyRules();
   // DataBot's typed columns are tighter than the defaults, and the engine reads `rules` — so the
   // JSON has to carry the same numbers or the row describes a policy that is not being enforced.
+  // All three windows are the same $0.50 on purpose. The spend below is stamped with the seed's
+  // own window keys, so the hourly window is the one that trips during a demo seeded that hour —
+  // and the monthly window keeps the agent exhausted for the rest of the month if it is not.
+  // Without that, a database seeded at 14:59 would hand D5 a fresh budget at 15:00.
+  const budgetBotRules = policyRules({
+    financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "0.50", dailyBudgetUsd: "0.50", monthlyBudgetUsd: "0.50" },
+  });
+
   const dataBotRules = policyRules({
     financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "0.50", dailyBudgetUsd: "2.00", monthlyBudgetUsd: "20.00" },
     velocity: { maxTxPerMinute: 3, maxTxPerHour: 20, maxTxPerMerchantPerMinute: 5 },
@@ -165,10 +199,26 @@ async function main() {
       maxTxPerMinute: 3, maxTxPerHour: 20, rules: dataBotRules,
       createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(540),
     },
+    {
+      id: budgetBotPolicyId, agentId: budgetBotId, version: 1, isActive: true,
+      maxPerTransactionMinor: toMinor("1.00"), hourlyBudgetMinor: toMinor("0.50"),
+      dailyBudgetMinor: toMinor("0.50"), monthlyBudgetMinor: toMinor("0.50"),
+      maxTxPerMinute: 10, maxTxPerHour: 100, rules: budgetBotRules,
+      createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(300),
+    },
+    {
+      id: velocityBotPolicyId, agentId: velocityBotId, version: 1, isActive: true,
+      maxPerTransactionMinor: toMinor("1.00"), hourlyBudgetMinor: toMinor("1.00"),
+      dailyBudgetMinor: toMinor("5.00"), monthlyBudgetMinor: toMinor("50.00"),
+      maxTxPerMinute: 10, maxTxPerHour: 100, rules: policyRules(),
+      createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(420),
+    },
   ]);
 
   await db.update(schema.agents).set({ activePolicyId: v3 }).where(eq(schema.agents.id, researchBotId));
   await db.update(schema.agents).set({ activePolicyId: dataBotPolicyId }).where(eq(schema.agents.id, dataBotId));
+  await db.update(schema.agents).set({ activePolicyId: budgetBotPolicyId }).where(eq(schema.agents.id, budgetBotId));
+  await db.update(schema.agents).set({ activePolicyId: velocityBotPolicyId }).where(eq(schema.agents.id, velocityBotId));
 
   type SeedIntent = typeof schema.paymentIntents.$inferInsert;
   const intents: SeedIntent[] = [];
@@ -207,6 +257,68 @@ async function main() {
     for (const entryType of ["RESERVE", "COMMIT"] as const) {
       ledger.push({
         id: newId("ledger"), agentId: researchBotId, intentId, reservationId,
+        entryType, amountMinor, ...windowKeys(at), createdAt: at,
+      });
+    }
+  }
+
+  // BudgetBot's history: five $0.10 settlements that add up to exactly its $0.50 allowance.
+  // Dated inside the current hour so all three budget windows read as spent. This is what makes
+  // D5 a single instant call instead of an impossible burst.
+  for (let i = 0; i < 5; i++) {
+    const at = minutesAgo(20 - i * 4);
+    const intentId = newId("intent");
+    const amountMinor = toMinor("0.10");
+    pushIntent(
+      {
+        id: intentId, agentId: budgetBotId, amountMinor, asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
+        recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: "POST /api/sandbox/summarize",
+        reason: "metered reporting run", nonce: `nonce_budget_${i}`,
+        intentHash: createHash("sha256").update(`${intentId}budget`).digest("hex"),
+        state: "SETTLED", decision: "ALLOW", policyVersion: 1, reasons: [],
+        matchedRules: ["financial.budgets"], riskScore: 8 + i, riskSignals: [], latencyMs: 16 + i,
+        txHash: base32Shaped(`budgettx${i}`, 52),
+        settledAt: at, createdAt: at, updatedAt: at,
+      },
+      "PAYMENT_SETTLED",
+      { amountUsd: "0.10", merchant: SANDBOX },
+    );
+
+    const reservationId = newId("reservation");
+    for (const entryType of ["RESERVE", "COMMIT"] as const) {
+      ledger.push({
+        id: newId("ledger"), agentId: budgetBotId, intentId, reservationId,
+        entryType, amountMinor, ...windowKeys(at), createdAt: at,
+      });
+    }
+  }
+
+  // VelocityBot's history: three old settlements, dated at the fixed epoch so they touch no
+  // current budget or velocity window. Their only job is to make isFirstPayment false, which
+  // would otherwise add 10 risk points to the first call of every burst.
+  for (let i = 0; i < 3; i++) {
+    const at = minutesAgo(400 - i * 30);
+    const intentId = newId("intent");
+    const amountMinor = toMinor("0.02");
+    pushIntent(
+      {
+        id: intentId, agentId: velocityBotId, amountMinor, asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
+        recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: "POST /api/sandbox/search",
+        reason: "high-frequency search", nonce: `nonce_velocity_${i}`,
+        intentHash: createHash("sha256").update(`${intentId}velocity`).digest("hex"),
+        state: "SETTLED", decision: "ALLOW", policyVersion: 1, reasons: [],
+        matchedRules: ["velocity"], riskScore: 6 + i, riskSignals: [], latencyMs: 14 + i,
+        txHash: base32Shaped(`velocitytx${i}`, 52),
+        settledAt: at, createdAt: at, updatedAt: at,
+      },
+      "PAYMENT_SETTLED",
+      { amountUsd: "0.02", merchant: SANDBOX },
+    );
+
+    const reservationId = newId("reservation");
+    for (const entryType of ["RESERVE", "COMMIT"] as const) {
+      ledger.push({
+        id: newId("ledger"), agentId: velocityBotId, intentId, reservationId,
         entryType, amountMinor, ...windowKeys(at), createdAt: at,
       });
     }
@@ -282,8 +394,10 @@ async function main() {
   });
   await db.insert(schema.auditLogs).values(auditRows);
 
-  console.log(`seeded: 2 agents, 4 policies, ${intents.length} intents, ${ledger.length} ledger rows, ${auditRows.length} audit rows`);
+  console.log(`seeded: 4 agents, 6 policies, ${intents.length} intents, ${ledger.length} ledger rows, ${auditRows.length} audit rows`);
   console.log(`ResearchBot api key: gk_live_researchbot_demo`);
+  console.log(`BudgetBot api key:   gk_live_budgetbot_demo    (budget already at 100% — demo D5)`);
+  console.log(`VelocityBot api key: gk_live_velocitybot_demo  (clean history for the burst — demo D3)`);
   process.exit(0);
 }
 
