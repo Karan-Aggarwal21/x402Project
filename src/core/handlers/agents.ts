@@ -14,7 +14,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(500).optional(),
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-  walletNetwork: z.string().max(60).default("base-sepolia"),
+  walletNetwork: z.string().max(60).default("algorand-testnet"),
   allowanceCapUsd: z.string().regex(/^\d+(\.\d{1,6})?$/).default("25.00"),
   fundedUsd: z.string().regex(/^\d+(\.\d{1,6})?$/).default("0.00"),
   createdByEmail: z.string().email().optional(),

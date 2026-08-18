@@ -10,6 +10,7 @@ import { DecisionBadge } from "@/dashboard/components/decision-badge";
 import { ReasonChip } from "@/dashboard/components/reason-chip";
 import { resourceLabel } from "@/dashboard/resource-label";
 import { ExternalLink, Clock, ShieldX, Radio } from "lucide-react";
+import { explorerTxUrl } from "@/shared/explorer";
 
 export function DecisionFeed({
   agentId,
@@ -133,10 +134,10 @@ function DecisionRow({ item }: { item: LiveDecisionItem }) {
 
       {/* Right: Specific Visual Enforcement Rule Proof */}
       <div className="shrink-0 flex items-center gap-2 sm:text-right">
-        {/* 🟢 ALLOW: Must show tx hash linked to BaseScan */}
-        {isAllow && item.txHash && (
+        {/* ALLOW: the hash links to whichever explorer owns this rail. */}
+        {isAllow && item.txHash && explorerTxUrl(item.network, item.txHash) && (
           <a
-            href={`https://sepolia.basescan.org/tx/${item.txHash}`}
+            href={explorerTxUrl(item.network, item.txHash)!}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs font-mono text-emerald-600 hover:text-emerald-700 hover:underline bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 transition-colors"

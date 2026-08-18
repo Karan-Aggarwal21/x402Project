@@ -10,7 +10,7 @@ import { newId } from "@/shared/ids";
 import { toMinor, toUsd } from "@/shared/money";
 import type { Decision, PaymentIntent, Reason } from "@/shared/types";
 
-const EXPLORER = "https://sepolia.basescan.org/tx/";
+import { explorerTxUrl } from "@/shared/explorer";
 
 export interface GuardedRequestInput {
   agentId: string;
@@ -31,7 +31,7 @@ export interface GuardedRequestResult {
   merchant: string;
   resource: string;
   amountUsd: string | null;
-  payment?: { amount: string; txHash: `0x${string}`; explorerUrl: string; settledAt: string };
+  payment?: { amount: string; txHash: string; explorerUrl: string; settledAt: string };
   onChain: { signed: boolean; txHash: string | null };
   response?: { status: number; headers: Record<string, string>; body: unknown };
 }
@@ -176,7 +176,7 @@ export async function runGuardedRequest(input: GuardedRequestInput): Promise<Gua
       payment: {
         amount: toUsd(intent.amountMinor),
         txHash: settlement.txHash,
-        explorerUrl: `${EXPLORER}${settlement.txHash}`,
+        explorerUrl: explorerTxUrl(intent.network, settlement.txHash) ?? "",
         settledAt: settlement.settledAt.toISOString(),
       },
       onChain: { signed: true, txHash: settlement.txHash },

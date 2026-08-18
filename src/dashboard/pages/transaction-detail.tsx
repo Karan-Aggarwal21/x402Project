@@ -10,6 +10,7 @@ import { ReasonChip } from "@/dashboard/components/reason-chip";
 import { TxTimeline } from "@/dashboard/components/tx-timeline";
 import { resourceLabel } from "@/dashboard/resource-label";
 import { toFeedItem, type LiveDecisionItem, type TransactionRow } from "@/dashboard/hooks/useLiveDecisions";
+import { explorerName, explorerTxUrl, networkLabel } from "@/shared/explorer";
 import {
   ArrowLeft,
   ExternalLink,
@@ -132,7 +133,7 @@ export function TransactionDetailPage() {
         <div className="text-right text-xs text-zinc-500 font-mono">
           <div>Created: {new Date(transaction.createdAt).toLocaleString()}</div>
           <div className="text-emerald-600 font-sans font-medium mt-0.5">
-            Network: {transaction.network || "Base Sepolia"}
+            Network: {networkLabel(transaction.network)}
           </div>
         </div>
       </div>
@@ -183,7 +184,7 @@ export function TransactionDetailPage() {
                   </span>
                 </div>
                 <p className="text-zinc-300 text-sm mt-1">
-                  Payment passed all pre-flight guard checks and settled on Base Sepolia.
+                  Payment passed all pre-flight guard checks and settled on {networkLabel(transaction.network)}.
                 </p>
                 <div className="mt-3 font-mono text-xs text-zinc-300 break-all">
                   Tx: {transaction.txHash}
@@ -192,12 +193,12 @@ export function TransactionDetailPage() {
             </div>
 
             <a
-              href={`https://sepolia.basescan.org/tx/${transaction.txHash}`}
+              href={explorerTxUrl(transaction.network, transaction.txHash) ?? "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shrink-0"
             >
-              <span>View on BaseScan</span>
+              <span>View on {explorerName(transaction.network)}</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </div>

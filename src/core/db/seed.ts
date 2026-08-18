@@ -6,13 +6,27 @@ import { getDb, schema } from "@/core/db";
 import { computeRowHash, GENESIS_HASH } from "@/core/audit/chain";
 import { newId } from "@/shared/ids";
 import { toMinor } from "@/shared/money";
-import { BASE_SEPOLIA_NETWORK_ID, BASE_SEPOLIA_USDC_ADDRESS } from "@/shared/env";
+import { ALGORAND_TESTNET_NETWORK_ID, ALGORAND_TESTNET_USDC_ASA } from "@/shared/env";
 import type { PolicyRules } from "@/shared/types";
 
 const SANDBOX = "localhost:3000";
+// Algorand ids are base32 over A-Z2-7 — 58 characters for an address, 52 for a transaction id.
+// These are deterministic stand-ins with the right alphabet and length, not real encodings, so
+// every shape check behaves exactly as it does against the chain.
+const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function base32Shaped(input: string, length: number): string {
+  const digest = createHash("sha256").update(input).digest();
+  return Array.from({ length }, (_, i) => BASE32[digest[i % digest.length] % 32]).join("");
+}
+const placeholderAddress = (role: string) => base32Shaped(`address:${role}`, 58);
+
 // Pinned recipient must be the address the sandbox actually pays to, or rule 5 blocks every payment.
-const MERCHANT_WALLET = process.env.MERCHANT_WALLET_ADDRESS ?? "0x9a2B4c6D8e0F1a3B5c7D9e1F2a4B6c8D0e2F4a6B";
-const ROGUE_WALLET = "0xdEaD00000000000000000000000000000000BEEF";
+// The fallbacks keep `npm run db:seed` working on a machine with no wallet set up — but a seed
+// built on them blocks every real payment, which is a failure this project has already hit once.
+// Set these in .env.local before seeding anything you intend to demo.
+const MERCHANT_WALLET = process.env.MERCHANT_ALGORAND_ADDRESS ?? placeholderAddress("merchant");
+const ROGUE_WALLET = process.env.ROGUE_ALGORAND_ADDRESS ?? placeholderAddress("rogue");
+const AGENT_WALLET = process.env.AGENT_ALGORAND_ADDRESS ?? placeholderAddress("agent");
 
 const RESOURCES = [
   { path: "POST /api/sandbox/search", usd: "0.02", reason: "search for x402 adoption data" },
@@ -34,7 +48,10 @@ function policyRules(overrides: Partial<PolicyRules> = {}): PolicyRules {
       enforceRecipientPinning: true,
     },
     velocity: { maxTxPerMinute: 10, maxTxPerHour: 100, maxTxPerMerchantPerMinute: 5 },
-    rail: { allowedNetworks: [BASE_SEPOLIA_NETWORK_ID], allowedAssets: [BASE_SEPOLIA_USDC_ADDRESS] },
+    // The exact strings that arrive on the wire. The network is the full genesis hash form, not
+    // the truncated CAIP-2 constant the SDK uses internally, and the asset is an ASA id rather
+    // than a contract address. Either one wrong and every payment blocks as NETWORK_NOT_ALLOWED.
+    rail: { allowedNetworks: [ALGORAND_TESTNET_NETWORK_ID], allowedAssets: [ALGORAND_TESTNET_USDC_ASA] },
     risk: {
       autoApproveBelowUsd: "0.10",
       holdBetweenUsd: ["0.10", "1.00"],
@@ -79,7 +96,7 @@ async function main() {
       description: "Research assistant that buys search, summarise and fact-check calls.",
       status: "ACTIVE",
       apiKeyHash: hashKey("gk_live_researchbot_demo"),
-      walletAddress: "0x1F3a5C7e9B0d2F4a6C8e0B2d4F6a8C0e2B4d6F8a",
+      walletAddress: AGENT_WALLET,
       walletAllowanceCapMinor: toMinor("25.00"),
       walletFundedMinor: toMinor("10.00"),
       createdAt: minutesAgo(600),
@@ -90,7 +107,7 @@ async function main() {
       description: "Bulk extraction agent. Frozen after a velocity incident.",
       status: "FROZEN",
       apiKeyHash: hashKey("gk_live_databot_demo"),
-      walletAddress: "0x2A4b6C8d0E2f4A6b8C0d2E4f6A8b0C2d4E6f8A0b",
+      walletAddress: base32Shaped("address:databot", 58),
       walletAllowanceCapMinor: toMinor("10.00"),
       walletFundedMinor: toMinor("4.00"),
       frozenAt: minutesAgo(45),
@@ -171,13 +188,15 @@ async function main() {
     const amountMinor = toMinor(resource.usd);
     pushIntent(
       {
-        id: intentId, agentId: researchBotId, amountMinor, asset: BASE_SEPOLIA_USDC_ADDRESS, network: BASE_SEPOLIA_NETWORK_ID,
+        id: intentId, agentId: researchBotId, amountMinor, asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
         recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: resource.path, reason: resource.reason,
         nonce: `nonce_${i}`, intentHash: createHash("sha256").update(`${intentId}${resource.path}`).digest("hex"),
         state: "SETTLED", decision: "ALLOW", policyVersion: 3, reasons: [],
         matchedRules: ["financial.maxPerTransactionUsd", "merchant.allowedMerchants"],
         riskScore: 5 + (i % 12), riskSignals: [], latencyMs: 18 + (i % 20),
-        txHash: `0x${createHash("sha256").update(`tx${i}`).digest("hex")}`,
+        // Synthetic: shaped like an Algorand transaction id but not on chain, so this link 404s
+        // on Lora. The clickable proof in the demo is a live D1 payment, never a seeded row.
+        txHash: base32Shaped(`tx${i}`, 52),
         settledAt: at, createdAt: at, updatedAt: at,
       },
       "PAYMENT_SETTLED",
@@ -210,7 +229,7 @@ async function main() {
     const intentId = newId("intent");
     pushIntent(
       {
-        id: intentId, agentId: researchBotId, amountMinor: toMinor(block.usd), asset: BASE_SEPOLIA_USDC_ADDRESS, network: BASE_SEPOLIA_NETWORK_ID,
+        id: intentId, agentId: researchBotId, amountMinor: toMinor(block.usd), asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
         recipient: block.recipient, merchantDomain: block.merchant, resource: "POST /api/sandbox/premium-report",
         reason: "buy the premium dataset", nonce: `nonce_block_${i}`,
         intentHash: createHash("sha256").update(`${intentId}block`).digest("hex"),
@@ -233,7 +252,7 @@ async function main() {
     const intentId = newId("intent");
     pushIntent(
       {
-        id: intentId, agentId: researchBotId, amountMinor: toMinor(hold.usd), asset: BASE_SEPOLIA_USDC_ADDRESS, network: BASE_SEPOLIA_NETWORK_ID,
+        id: intentId, agentId: researchBotId, amountMinor: toMinor(hold.usd), asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
         recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: "POST /api/sandbox/premium-report",
         reason: hold.reason, nonce: `nonce_hold_${i}`,
         intentHash: createHash("sha256").update(`${intentId}hold`).digest("hex"),

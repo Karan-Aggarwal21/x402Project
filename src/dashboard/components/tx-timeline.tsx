@@ -12,6 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import { resourceLabel } from "@/dashboard/resource-label";
+import { explorerTxUrl, networkLabel } from "@/shared/explorer";
 
 /** OWNER: UI · INTENT_CREATED -> EVALUATED -> RESERVED -> SIGNED -> SETTLED, with timestamps. */
 export function TxTimeline({ transaction }: { transaction: LiveDecisionItem }) {
@@ -157,19 +158,19 @@ export function TxTimeline({ transaction }: { transaction: LiveDecisionItem }) {
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm text-zinc-900">
               {isAllow
-                ? "4. On-Chain Settlement (Base Sepolia)"
+                ? `4. On-Chain Settlement (${networkLabel(transaction.network)})`
                 : isHold
                 ? "4. Approval Inbox Queue"
                 : "4. Policy Guard Interception (Zero Gas / No On-Chain Tx)"}
             </h4>
           </div>
 
-          {isAllow && transaction.txHash && (
+          {isAllow && transaction.txHash && explorerTxUrl(transaction.network, transaction.txHash) && (
             <div className="mt-2 p-3 rounded-lg bg-emerald-50/70 border border-emerald-200 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-emerald-900 font-medium">Tx Hash:</span>
                 <a
-                  href={`https://sepolia.basescan.org/tx/${transaction.txHash}`}
+                  href={explorerTxUrl(transaction.network, transaction.txHash)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-1 font-semibold"

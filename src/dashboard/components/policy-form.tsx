@@ -47,7 +47,7 @@ export function PolicyForm({
       maxTxPerMerchantPerMinute: 5,
     },
     rail: {
-      allowedNetworks: ["base-sepolia"],
+      allowedNetworks: ["algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI="],
       allowedAssets: ["USDC"],
     },
     risk: {

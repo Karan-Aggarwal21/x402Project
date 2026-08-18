@@ -96,7 +96,7 @@ export async function run(log: (line: string) => void = console.log): Promise<vo
   }
 
   log(`[D6] block codes: ${[...result.blockedByCode].map(([c, n]) => `${c} x${n}`).join(", ")}`);
-  log(`[D6] attempted ${formatUsd(toMinor(ATTEMPTED_SPEND_USD))}, actual spend ${formatUsd(result.spentMinor)} (the search), attack transactions on BaseScan: 0`);
+  log(`[D6] attempted ${formatUsd(toMinor(ATTEMPTED_SPEND_USD))}, actual spend ${formatUsd(result.spentMinor)} (the search), attack transactions on chain: 0`);
   if (result.spentMinor > toMinor(MAX_ACTUAL_SPEND_USD)) {
     throw new Error(`[D6] spent ${formatUsd(result.spentMinor)} — over the $${MAX_ACTUAL_SPEND_USD} bar`);
   }

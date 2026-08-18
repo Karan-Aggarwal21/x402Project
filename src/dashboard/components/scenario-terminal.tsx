@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Terminal, Copy, Check, ExternalLink, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { explorerTxUrl } from "@/shared/explorer";
 
 export interface ScenarioTerminalProps {
   scenarioId: string;
@@ -33,7 +34,7 @@ export function ScenarioTerminal({
 
   const renderLogLine = (line: string, index: number) => {
     // Regex to match tx hashes (0x followed by 64 hex chars)
-    const txHashMatch = line.match(/(0x[a-fA-F0-9]{64})/);
+    const txHashMatch = line.match(/(0x[a-fA-F0-9]{64}|\b[A-Z2-7]{52}\b)/);
 
     let textColor = "text-zinc-300";
     if (line.includes("PASS") || line.includes("ALLOW") || line.includes("Settled on")) {
@@ -61,7 +62,7 @@ export function ScenarioTerminal({
           <div>
             <span>{parts[0]}</span>
             <a
-              href={`https://sepolia.basescan.org/tx/${hash}`}
+              href={explorerTxUrl(hash.startsWith("0x") ? "eip155:84532" : "algorand:testnet", hash)!}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-400 hover:text-sky-300 underline font-mono inline-flex items-center gap-0.5 bg-sky-950/40 px-1 rounded border border-sky-800/60"

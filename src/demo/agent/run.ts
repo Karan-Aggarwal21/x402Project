@@ -1,5 +1,5 @@
 // OWNER: DEMO. The LLM driver: generateText + tools + a hard step ceiling. No agent framework.
-// RUN: npm run agent — needs GROQ_API_KEY and AGENT_WALLET_PRIVATE_KEY in .env.local.
+// RUN: npm run agent — needs GROQ_API_KEY and AVM_PRIVATE_KEY in .env.local.
 import { generateText, stepCountIs } from "ai";
 import { groq } from "@ai-sdk/groq";
 import { buildTools, type ToolCallRecord } from "@/demo/agent/tools";

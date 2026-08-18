@@ -29,7 +29,7 @@ export type DrillStatus = "PASS" | "FAIL" | "MANUAL" | "INFRA";
 
 // Non-control outcomes: Guard down, wallet key missing, or the gateway's own HTTP throttle.
 const INFRA_CODES = new Set(["GUARD_UNAVAILABLE", "UPSTREAM_UNAVAILABLE", "RATE_LIMITED"]);
-const infraNote = (code: string) => `no verdict — the request never reached a control (${code}). Check AGENT_WALLET_PRIVATE_KEY and that the dev server is up.`;
+const infraNote = (code: string) => `no verdict — the request never reached a control (${code}). Check AVM_PRIVATE_KEY and that the dev server is up.`;
 
 // Attempted spend is a property of the drill definition, so it is reported even when
 // infrastructure kept the attack from reaching a control.
@@ -215,7 +215,7 @@ export function buildMarkdown(results: DrillResult[], sellers: SellerCheck[]): s
 
 async function main() {
   const log = console.log;
-  log("=== Attack drills — real USDC on Base Sepolia. Worst case without any control: ~$5.80. ===\n");
+  log("=== Attack drills — real USDC on Algorand TestNet. Worst case without any control: ~$5.80. ===\n");
 
   log("[check] six sellers must answer a bare request with a decodable 402");
   const sellers: SellerCheck[] = [];
