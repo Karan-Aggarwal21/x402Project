@@ -16,7 +16,8 @@ export interface AgentItem {
   name: string;
   description: string;
   status: "ACTIVE" | "FROZEN";
-  walletAddress: string;
+  /** Null until a wallet is attached. A freshly registered agent has none. */
+  walletAddress: string | null;
   walletAllowanceCapUsd: string;
   walletFundedUsd: string;
   spentUsd: string;
@@ -49,7 +50,7 @@ export function toAgentItem(row: AgentRow, activePolicyVersion = 0): AgentItem {
     name: row.name,
     description: row.description,
     status: row.status,
-    walletAddress: row.wallet.address,
+    walletAddress: row.wallet.address ?? null,
     walletAllowanceCapUsd: row.wallet.allowanceCapUsd,
     walletFundedUsd: row.wallet.fundedUsd,
     spentUsd: "0.00",
@@ -135,7 +136,9 @@ export function AgentCard({ agent }: { agent: AgentItem }) {
               Wallet:
             </span>
             <span className="font-mono text-zinc-800 font-medium">
-              {agent.walletAddress.slice(0, 6)}...{agent.walletAddress.slice(-4)}
+              {agent.walletAddress
+                ? `${agent.walletAddress.slice(0, 6)}...${agent.walletAddress.slice(-4)}`
+                : "not attached"}
             </span>
           </div>
 

@@ -8,6 +8,7 @@ import {
   encodePaymentSignatureHeader,
 } from "@x402/core/http";
 import type { PaymentPayload, PaymentRequired } from "@x402/core/types";
+import { AVM_TX_ID, EVM_TX_HASH, isAddress } from "@/shared/address";
 import type { ErrorCode } from "@/shared/errors";
 import type { SettlementResult } from "@/shared/types";
 
@@ -36,14 +37,11 @@ export class PaymentHeaderError extends Error {
 // Both stay recognised after A3 on purpose. An EVM offer can no longer be signed — the adapter
 // registers no EVM scheme — and the policy engine refuses it by rail. Keeping it *readable* means
 // that refusal surfaces as NETWORK_NOT_ALLOWED, a decision, instead of a malformed-header error.
-const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
-const AVM_ADDRESS = /^[A-Z2-7]{58}$/;
-const EVM_TX_HASH = /^0x[0-9a-fA-F]{64}$/;
-const AVM_TX_ID = /^[A-Z2-7]{52}$/;
+
 
 /** Exported so intent/build.ts can enforce the same rule without keeping a second copy of it. */
 export function isRecipientAddress(value: string): boolean {
-  return EVM_ADDRESS.test(value) || AVM_ADDRESS.test(value);
+  return isAddress(value);
 }
 
 const requirementsSchema = z.object({

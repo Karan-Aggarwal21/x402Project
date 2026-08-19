@@ -113,7 +113,7 @@ export function AgentDetailPage() {
   }, [agentId]);
 
   const handleCopyWallet = () => {
-    if (!agent) return;
+    if (!agent?.walletAddress) return;
     navigator.clipboard.writeText(agent.walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -200,7 +200,9 @@ export function AgentDetailPage() {
           >
             <Wallet className="h-3.5 w-3.5 text-zinc-400" />
             <span>
-              {agent.walletAddress.slice(0, 8)}...{agent.walletAddress.slice(-6)}
+              {agent.walletAddress
+                ? `${agent.walletAddress.slice(0, 8)}...${agent.walletAddress.slice(-6)}`
+                : "no wallet attached"}
             </span>
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-zinc-400" />}
           </button>

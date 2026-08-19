@@ -11,8 +11,20 @@ const gatewayOk = (response: unknown, txHash = "0xabc") =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe("buildTools", () => {
-  it("exposes exactly the five paid tools", () => {
-    expect(Object.keys(buildTools()).sort()).toEqual(Object.keys(TOOL_ENDPOINTS).sort());
+  it("exposes every paid endpoint as a tool", () => {
+    const exposed = Object.keys(buildTools());
+    for (const name of Object.keys(TOOL_ENDPOINTS)) {
+      expect(exposed).toContain(name);
+    }
+  });
+
+  // gpt-oss-120b calls summarize "summary" and Groq rejects the unknown name, ending the run.
+  // The alias exists so a synonym cannot kill a live demo; it must stay pointed at a real tool.
+  it("aliases summary onto summarize without inventing a sixth paid endpoint", () => {
+    const exposed = Object.keys(buildTools());
+    expect(exposed).toContain("summary");
+    expect(Object.keys(TOOL_ENDPOINTS)).not.toContain("summary");
+    expect(exposed.filter((name) => !(name in TOOL_ENDPOINTS))).toEqual(["summary"]);
   });
 
   it("search returns the merchant body on success and records the spend", async () => {

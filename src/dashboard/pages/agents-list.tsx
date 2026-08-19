@@ -5,8 +5,10 @@ import { apiGet } from "@/dashboard/api-client/client";
 import { API } from "@/dashboard/api-client/endpoints";
 import { AgentCard, toAgentItem, type AgentItem, type AgentRow } from "@/dashboard/components/agent-card";
 import { DecisionBar } from "@/dashboard/charts/decision-bar";
+import { CreateAgentModal } from "@/dashboard/components/create-agent-modal";
 import {
   Bot,
+  Plus,
   ShieldCheck,
   ShieldAlert,
   Wallet,
@@ -22,6 +24,9 @@ export function AgentsListPage() {
   const [agents, setAgents] = useState<AgentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  // Bumped after a create so the list refetches without a page reload.
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     async function loadAgents() {
@@ -39,7 +44,7 @@ export function AgentsListPage() {
     }
 
     loadAgents();
-  }, []);
+  }, [reloadToken]);
 
   const total = agents.length;
   const activeCount = agents.filter((a) => a.status === "ACTIVE").length;
@@ -51,17 +56,32 @@ export function AgentsListPage() {
   return (
     <div className="space-y-8 font-sans">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3 font-sans">
-          <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
-            <Bot className="h-5 w-5" />
-          </div>
-          Autonomous Agents
-        </h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Registered agent spenders governed by real-time policy rules, wallet allowances, and velocity limits.
-        </p>
+      <div className="flex flex-wrap items-start gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3 font-sans">
+            <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
+              <Bot className="h-5 w-5" />
+            </div>
+            Autonomous Agents
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Registered agent spenders governed by real-time policy rules, wallet allowances, and velocity limits.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" /> Register agent
+        </button>
       </div>
+
+      {creating && (
+        <CreateAgentModal
+          onClose={() => setCreating(false)}
+          onCreated={() => setReloadToken((n) => n + 1)}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

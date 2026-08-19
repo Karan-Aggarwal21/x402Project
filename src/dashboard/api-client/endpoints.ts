@@ -23,4 +23,5 @@ export const API = {
   auditVerify: "/api/v1/audit/verify",
   events: "/api/v1/events/stream",
   simulatorRun: "/api/v1/simulator/run",
+  consoleRun: "/api/v1/console/run",
 } as const;

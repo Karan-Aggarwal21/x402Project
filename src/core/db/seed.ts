@@ -133,6 +133,7 @@ async function main() {
   const dataBotId = newId("agent");
   const budgetBotId = newId("agent");
   const velocityBotId = newId("agent");
+  const consoleBotId = newId("agent");
 
   await db.insert(schema.agents).values([
     {
@@ -181,6 +182,17 @@ async function main() {
       walletFundedMinor: toMinor("10.00"),
       createdAt: minutesAgo(420),
     },
+    {
+      id: consoleBotId,
+      name: "ConsoleBot",
+      description: "Live research agent driven from the Agent Console. Higher rate limit, same money limits.",
+      status: "ACTIVE",
+      apiKeyHash: hashKey("gk_live_consolebot_demo"),
+      walletAddress: AGENT_WALLET,
+      walletAllowanceCapMinor: toMinor("25.00"),
+      walletFundedMinor: toMinor("10.00"),
+      createdAt: minutesAgo(240),
+    },
   ]);
 
   // Three versions on ResearchBot so the version-history UI has something real to diff.
@@ -190,6 +202,7 @@ async function main() {
   const dataBotPolicyId = newId("policy");
   const budgetBotPolicyId = newId("policy");
   const velocityBotPolicyId = newId("policy");
+  const consoleBotPolicyId = newId("policy");
 
   const v1Rules = policyRules({
     financial: { maxPerTransactionUsd: "0.05", hourlyBudgetUsd: "0.50", dailyBudgetUsd: "2.00", monthlyBudgetUsd: "20.00" },
@@ -206,6 +219,17 @@ async function main() {
   // Without that, a database seeded at 14:59 would hand D5 a fresh budget at 15:00.
   const budgetBotRules = policyRules({
     financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "0.50", dailyBudgetUsd: "0.50", monthlyBudgetUsd: "0.50" },
+  });
+
+  // Rate is raised so a live run is never cut short by rule 9; every money rule is the default.
+  // $2.00 premium report still trips maxPerTransactionUsd, and the $0.50 analyst edition still
+  // lands in the $0.10-$1.00 review band — so one console run can show ALLOW, BLOCK and HOLD.
+  const consoleBotRules = policyRules({
+    // Roomy enough to rehearse. A live run costs $0.15-$0.30, so a $1.00 hourly cap ran out after
+    // three practice runs and the demo then failed on BUDGET_EXCEEDED instead of showing the hold.
+    // Per-transaction stays $1.00 and the review band stays $0.10-$1.00 — the interesting limits.
+    financial: { maxPerTransactionUsd: "1.00", hourlyBudgetUsd: "5.00", dailyBudgetUsd: "20.00", monthlyBudgetUsd: "100.00" },
+    velocity: { maxTxPerMinute: 30, maxTxPerHour: 200, maxTxPerMerchantPerMinute: 30 },
   });
 
   const dataBotRules = policyRules({
@@ -256,12 +280,20 @@ async function main() {
       maxTxPerMinute: 10, maxTxPerHour: 100, rules: policyRules(),
       createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(420),
     },
+    {
+      id: consoleBotPolicyId, agentId: consoleBotId, version: 1, isActive: true,
+      maxPerTransactionMinor: toMinor("1.00"), hourlyBudgetMinor: toMinor("5.00"),
+      dailyBudgetMinor: toMinor("20.00"), monthlyBudgetMinor: toMinor("100.00"),
+      maxTxPerMinute: 30, maxTxPerHour: 200, rules: consoleBotRules,
+      createdByEmail: "admin@aspg.dev", createdAt: minutesAgo(240),
+    },
   ]);
 
   await db.update(schema.agents).set({ activePolicyId: v3 }).where(eq(schema.agents.id, researchBotId));
   await db.update(schema.agents).set({ activePolicyId: dataBotPolicyId }).where(eq(schema.agents.id, dataBotId));
   await db.update(schema.agents).set({ activePolicyId: budgetBotPolicyId }).where(eq(schema.agents.id, budgetBotId));
   await db.update(schema.agents).set({ activePolicyId: velocityBotPolicyId }).where(eq(schema.agents.id, velocityBotId));
+  await db.update(schema.agents).set({ activePolicyId: consoleBotPolicyId }).where(eq(schema.agents.id, consoleBotId));
 
   type SeedIntent = typeof schema.paymentIntents.$inferInsert;
   const intents: SeedIntent[] = [];
@@ -366,6 +398,37 @@ async function main() {
     for (const entryType of ["RESERVE", "COMMIT"] as const) {
       ledger.push({
         id: newId("ledger"), agentId: velocityBotId, intentId, reservationId,
+        entryType, amountMinor, ...windowKeys(at), createdAt: at,
+      });
+    }
+  }
+
+  // ConsoleBot gets the same three-row backstory as VelocityBot, for the same reason: without it
+  // isFirstPayment adds 10 risk points to the opening call of every live run, and 10 on top of the
+  // 25 a recent block scores would push an ordinary two-cent search into the review queue.
+  for (let i = 0; i < 3; i++) {
+    const at = minutesAgo(230 - i * 20);
+    const intentId = newId("intent");
+    const amountMinor = toMinor("0.02");
+    pushIntent(
+      {
+        id: intentId, agentId: consoleBotId, amountMinor, asset: ALGORAND_TESTNET_USDC_ASA, network: ALGORAND_TESTNET_NETWORK_ID,
+        recipient: MERCHANT_WALLET, merchantDomain: SANDBOX, resource: "POST /api/sandbox/search",
+        reason: "console warm-up search", nonce: `nonce_console_${i}`,
+        intentHash: createHash("sha256").update(`${intentId}console`).digest("hex"),
+        state: "SETTLED", decision: "ALLOW", policyVersion: 1, reasons: [],
+        matchedRules: ["financial.maxPerTransactionUsd"], riskScore: 5 + i, riskSignals: [], latencyMs: 15 + i,
+        txHash: null,
+        settledAt: at, createdAt: at, updatedAt: at,
+      },
+      "PAYMENT_SETTLED",
+      { amountUsd: "0.02", merchant: SANDBOX },
+    );
+
+    const reservationId = newId("reservation");
+    for (const entryType of ["RESERVE", "COMMIT"] as const) {
+      ledger.push({
+        id: newId("ledger"), agentId: consoleBotId, intentId, reservationId,
         entryType, amountMinor, ...windowKeys(at), createdAt: at,
       });
     }
@@ -508,10 +571,11 @@ async function main() {
   });
   await db.insert(schema.auditLogs).values(auditRows);
 
-  console.log(`seeded: 4 agents, 6 policies, ${intents.length} intents, ${ledger.length} ledger rows, ${auditRows.length} audit rows`);
+  console.log(`seeded: 5 agents, 7 policies, ${intents.length} intents, ${ledger.length} ledger rows, ${auditRows.length} audit rows`);
   console.log(`ResearchBot api key: gk_live_researchbot_demo`);
   console.log(`BudgetBot api key:   gk_live_budgetbot_demo    (budget already at 100% — demo D5)`);
   console.log(`VelocityBot api key: gk_live_velocitybot_demo  (clean history for the burst — demo D3)`);
+  console.log(`ConsoleBot api key:  gk_live_consolebot_demo   (live Agent Console runs)`);
   console.log(`on-chain: ${REAL_SETTLEMENTS.length + 1} rows carry a real TestNet transaction id; every other settled row carries null`);
   process.exit(0);
 }

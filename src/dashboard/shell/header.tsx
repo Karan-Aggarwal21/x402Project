@@ -12,6 +12,7 @@ export const TOP_NAV = [
   { href: "/approvals", label: "Approvals" },
   { href: "/merchants", label: "Merchants" },
   { href: "/audit", label: "Audit Log" },
+  { href: "/console", label: "Agent Console" },
   { href: "/simulator", label: "Simulator" },
 ];
 
