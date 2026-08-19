@@ -470,7 +470,11 @@ async function main() {
     { usd: "0.45", reason: "buy the quarterly market report", risk: 38 },
     { usd: "0.80", reason: "purchase extended API access", risk: 44 },
   ].forEach((hold, i) => {
-    const at = minutesAgo(30 - i * 10);
+    // The only rows in this seed dated from the wall clock rather than T0. A hold carries a live
+    // 15-minute TTL: dated off the fixed epoch it is born expired, and an approval queue whose
+    // every row reads EXPIRED cannot demonstrate the one thing it exists to demonstrate. Every
+    // other row stays on T0, so the spend windows the budget rules read are still reproducible.
+    const at = new Date(Date.now() - (4 - i * 2) * 60_000);
     const intentId = newId("intent");
     pushIntent(
       {

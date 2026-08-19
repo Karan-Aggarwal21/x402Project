@@ -16,6 +16,7 @@ export const API = {
   transactions: "/api/v1/transactions",
   transaction: (id: string) => `/api/v1/transactions/${id}`,
   budgets: (agentId: string) => `/api/v1/budgets/${agentId}`,
+  walletBalances: "/api/v1/wallets/balances",
   approvals: "/api/v1/approvals",
   approve: (id: string) => `/api/v1/approvals/${id}/approve`,
   reject: (id: string) => `/api/v1/approvals/${id}/reject`,

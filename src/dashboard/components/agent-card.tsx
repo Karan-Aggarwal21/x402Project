@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import {
-  Bot,
-  ShieldCheck,
-  ShieldAlert,
   ArrowRight,
-  Wallet,
+  Bot,
+  Gauge,
   Lock,
-  Zap,
+  ShieldAlert,
+  ShieldCheck,
+  Wallet,
 } from "lucide-react";
 
 export interface AgentItem {
@@ -20,7 +20,14 @@ export interface AgentItem {
   walletAddress: string | null;
   walletAllowanceCapUsd: string;
   walletFundedUsd: string;
-  spentUsd: string;
+  /**
+   * Spend in the month window, and the ceiling it is measured against. Both null until the budgets
+   * endpoint answers — rendering "0.00" for "not known yet" reads as "this agent has spent
+   * nothing", which is the opposite claim.
+   */
+  spentUsd: string | null;
+  monthBudgetUsd: string | null;
+  reservedUsd: string | null;
   activePolicyId: string;
   activePolicyVersion: number;
   frozenAt?: string;
@@ -43,7 +50,8 @@ export interface AgentRow {
 
 // The cards want a flat shape; CORE groups the wallet. Reading agent.walletAddress off the raw row
 // throws on .slice and takes the whole page down, so the flattening happens on the way in.
-// spentUsd has no source on the agents endpoints — it lives on /api/v1/budgets/:agentId.
+// Spend has no source on the agents endpoints — it lives on /api/v1/budgets/:agentId, so it stays
+// null here and the caller fills it in once that request answers.
 export function toAgentItem(row: AgentRow, activePolicyVersion = 0): AgentItem {
   return {
     id: row.agentId,
@@ -53,7 +61,9 @@ export function toAgentItem(row: AgentRow, activePolicyVersion = 0): AgentItem {
     walletAddress: row.wallet.address ?? null,
     walletAllowanceCapUsd: row.wallet.allowanceCapUsd,
     walletFundedUsd: row.wallet.fundedUsd,
-    spentUsd: "0.00",
+    spentUsd: null,
+    monthBudgetUsd: null,
+    reservedUsd: null,
     activePolicyId: row.activePolicyId,
     activePolicyVersion,
     frozenAt: row.frozenAt ?? undefined,
@@ -62,46 +72,45 @@ export function toAgentItem(row: AgentRow, activePolicyVersion = 0): AgentItem {
   };
 }
 
-/** OWNER: UI · Agent summary card: status, wallet, budget bar, 24h decision mix. */
+/** OWNER: UI · Agent summary card: status, wallet, and how much of its month budget is gone. */
 export function AgentCard({ agent }: { agent: AgentItem }) {
   const isFrozen = agent.status === "FROZEN";
-  const spent = parseFloat(agent.spentUsd) || 0;
-  const cap = parseFloat(agent.walletAllowanceCapUsd) || 1;
-  const percent = Math.min(100, Math.round((spent / cap) * 100));
+
+  // Spent and reserved together, because that is what the budget rule compares to the ceiling.
+  const spent = agent.spentUsd === null ? null : Number(agent.spentUsd) || 0;
+  const reserved = agent.reservedUsd === null ? 0 : Number(agent.reservedUsd) || 0;
+  const budget = agent.monthBudgetUsd === null ? null : Number(agent.monthBudgetUsd) || 0;
+  const percent =
+    spent === null || budget === null || budget === 0
+      ? null
+      : Math.min(100, Math.round(((spent + reserved) / budget) * 100));
 
   return (
     <div
-      className={`bg-white rounded-xl border transition-all hover:shadow-md flex flex-col justify-between overflow-hidden ${
-        isFrozen
-          ? "border-rose-300 bg-rose-50/10"
-          : "border-zinc-200"
+      className={`flex flex-col justify-between overflow-hidden rounded-xl border bg-white transition-all hover:shadow-md ${
+        isFrozen ? "border-rose-300 bg-rose-50/10" : "border-zinc-200"
       }`}
     >
-      <div className="p-6 space-y-4">
-        {/* Header: Name + Status */}
+      <div className="space-y-4 p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                 isFrozen
-                  ? "bg-rose-100 text-rose-700 border border-rose-200"
-                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  ? "border border-rose-200 bg-rose-100 text-rose-700"
+                  : "border border-emerald-200 bg-emerald-50 text-emerald-700"
               }`}
             >
               {isFrozen ? <Lock className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
             </div>
-            <div>
-              <h3 className="font-bold text-base text-zinc-900 flex items-center gap-2">
-                {agent.name}
-              </h3>
-            </div>
+            <h3 className="text-base font-bold text-zinc-900">{agent.name}</h3>
           </div>
 
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold font-mono ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-xs font-semibold ${
               isFrozen
-                ? "bg-rose-100 text-rose-800 border border-rose-300"
-                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                ? "border border-rose-300 bg-rose-100 text-rose-800"
+                : "border border-emerald-200 bg-emerald-50 text-emerald-700"
             }`}
           >
             {isFrozen ? (
@@ -118,71 +127,82 @@ export function AgentCard({ agent }: { agent: AgentItem }) {
           </span>
         </div>
 
-        {/* Description */}
-        <p className="text-xs text-zinc-600 line-clamp-2">{agent.description}</p>
+        <p className="line-clamp-2 text-xs text-zinc-600">{agent.description}</p>
 
-        {/* Frozen Alert Box if applicable */}
         {isFrozen && agent.frozenReason && (
-          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
-            <span className="font-semibold">Frozen Reason:</span> {agent.frozenReason}
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+            <span className="font-semibold">Frozen reason:</span> {agent.frozenReason}
           </div>
         )}
 
-        {/* Wallet & Policy */}
-        <div className="space-y-2 pt-2 border-t border-zinc-100 text-xs">
+        <div className="space-y-2 border-t border-zinc-100 pt-2 text-xs">
           <div className="flex items-center justify-between text-zinc-500">
             <span className="flex items-center gap-1.5">
               <Wallet className="h-3.5 w-3.5 text-zinc-400" />
-              Wallet:
+              Wallet
             </span>
-            <span className="font-mono text-zinc-800 font-medium">
+            <span className="font-mono font-medium text-zinc-800">
               {agent.walletAddress
-                ? `${agent.walletAddress.slice(0, 6)}...${agent.walletAddress.slice(-4)}`
+                ? `${agent.walletAddress.slice(0, 6)}…${agent.walletAddress.slice(-4)}`
                 : "not attached"}
             </span>
           </div>
 
           <div className="flex items-center justify-between text-zinc-500">
-            <span>Active Policy:</span>
-            <span className="font-mono text-zinc-800 font-bold">
-              v{agent.activePolicyVersion}
+            <span>Wallet allowance cap</span>
+            <span className="font-mono font-medium text-zinc-800">${agent.walletAllowanceCapUsd}</span>
+          </div>
+
+          <div className="flex items-center justify-between text-zinc-500">
+            <span>Active policy</span>
+            <span className="font-mono font-bold text-zinc-800">
+              {agent.activePolicyVersion > 0 ? `v${agent.activePolicyVersion}` : "none"}
             </span>
           </div>
         </div>
 
-        {/* Budget Gauge Mini */}
+        {/* Month budget utilisation — the window the engine actually enforces */}
         <div className="space-y-1.5 pt-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-500 font-medium">Allowance Used:</span>
+            <span className="flex items-center gap-1.5 font-medium text-zinc-500">
+              <Gauge className="h-3.5 w-3.5 text-zinc-400" />
+              Month budget used
+            </span>
             <span className="font-mono font-bold text-zinc-900">
-              ${agent.spentUsd} / ${agent.walletAllowanceCapUsd} ({percent}%)
+              {spent === null || budget === null
+                ? "not available"
+                : `$${spent.toFixed(2)} / $${budget.toFixed(2)} (${percent}%)`}
             </span>
           </div>
-          <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all ${
-                isFrozen || percent >= 100
-                  ? "bg-rose-500"
-                  : percent >= 75
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-              }`}
-              style={{ width: `${percent}%` }}
-            />
+          <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+            {percent !== null && (
+              <div
+                className={`h-full transition-all ${
+                  isFrozen || percent >= 100
+                    ? "bg-rose-500"
+                    : percent >= 75
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+                }`}
+                style={{ width: `${percent}%` }}
+              />
+            )}
           </div>
+          {reserved > 0 && (
+            <p className="font-mono text-[11px] text-zinc-400">
+              includes ${reserved.toFixed(2)} reserved and not yet settled
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Footer Link */}
-      <div className="p-3 border-t border-zinc-100 bg-zinc-50/50 flex items-center justify-between px-6 text-xs">
-        <span className="text-zinc-400 font-mono">
-          Funded: ${agent.walletFundedUsd} USDC
-        </span>
+      <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/50 px-6 py-3 text-xs">
+        <span className="font-mono text-zinc-400">Funded: ${agent.walletFundedUsd} USDC</span>
         <Link
           href={`/agents/${agent.id}`}
-          className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+          className="inline-flex items-center gap-1 font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
         >
-          <span>View Details</span>
+          <span>View details</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>

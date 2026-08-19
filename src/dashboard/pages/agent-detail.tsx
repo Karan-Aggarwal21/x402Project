@@ -7,7 +7,9 @@ import { apiGet } from "@/dashboard/api-client/client";
 import { API } from "@/dashboard/api-client/endpoints";
 import { BudgetGauge } from "@/dashboard/components/budget-gauge";
 import { VelocityMeter } from "@/dashboard/components/velocity-meter";
-import { SpendArea } from "@/dashboard/charts/spend-area";
+import { SpendArea, type SpendPoint } from "@/dashboard/charts/spend-area";
+import { toFeedItem, type TransactionRow } from "@/dashboard/hooks/useLiveDecisions";
+import { networkLabel } from "@/shared/explorer";
 import { DecisionFeed } from "@/dashboard/components/decision-feed";
 import { toAgentItem, type AgentItem, type AgentRow } from "@/dashboard/components/agent-card";
 import {
@@ -85,6 +87,8 @@ export function AgentDetailPage() {
 
   const [agent, setAgent] = useState<AgentItem | null>(null);
   const [budget, setBudget] = useState<AgentBudgetResponse | null>(null);
+  const [spend, setSpend] = useState<SpendPoint[]>([]);
+  const [walletNetwork, setWalletNetwork] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -96,12 +100,40 @@ export function AgentDetailPage() {
         setLoading(true);
         // Both endpoints nest their payload: the agent under `agent`, the budget under `windows`
         // and `wallet`. Assigning either envelope directly leaves every field undefined.
-        const [agentData, budgetData] = await Promise.all([
+        const [agentData, budgetData, history] = await Promise.all([
           apiGet<{ agent: AgentRow; policy?: { version: number } }>(API.agent(agentId)),
           apiGet<BudgetResponse>(API.budgets(agentId)),
+          apiGet<{ transactions: TransactionRow[] }>(
+            `${API.transactions}?agentId=${agentId}&limit=200`,
+          ).catch(() => null),
         ]);
         setAgent(toAgentItem(agentData.agent, agentData.policy?.version ?? 0));
+        setWalletNetwork(agentData.agent.wallet?.network ?? null);
         setBudget(toFlatBudget(budgetData));
+
+        // Cumulative spend, oldest first, counting only payments that actually reached the chain.
+        // Cents as integers: a running total of decimal strings drifts within a dozen rows.
+        let cents = 0;
+        setSpend(
+          (history?.transactions ?? [])
+            .map(toFeedItem)
+            .filter((tx) => Boolean(tx.txHash))
+            .sort(
+              (a, b) =>
+                new Date(a.settledAt ?? a.createdAt).getTime() -
+                new Date(b.settledAt ?? b.createdAt).getTime(),
+            )
+            .map((tx) => {
+              cents += Math.round(Number(tx.amountUsd) * 100);
+              return {
+                time: new Date(tx.settledAt ?? tx.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                spend: cents / 100,
+              };
+            }),
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load agent");
       } finally {
@@ -283,23 +315,39 @@ export function AgentDetailPage() {
             <div
               className="h-full bg-emerald-500 transition-all"
               style={{
-                width: `${Math.round(
-                  ((parseFloat(budget?.walletAllowanceRemainingUsd || "23.65")) /
-                    (parseFloat(agent.walletAllowanceCapUsd) || 1)) *
-                    100
-                )}%`,
+                width: `${
+                  budget
+                    ? Math.min(
+                        100,
+                        Math.round(
+                          (parseFloat(budget.walletAllowanceRemainingUsd) /
+                            (parseFloat(agent.walletAllowanceCapUsd) || 1)) *
+                            100,
+                        ),
+                      )
+                    : 0
+                }%`,
               }}
             />
           </div>
           <div className="text-[11px] text-zinc-400 flex items-center justify-between pt-0.5">
-            <span>Funded on Base: ${agent.walletFundedUsd} USDC</span>
-            <span className="font-medium text-emerald-600">On-Chain Allowance Valid</span>
+            <span>
+              Funded on {networkLabel(walletNetwork)}: ${agent.walletFundedUsd} USDC
+            </span>
+            <span className="font-medium text-emerald-600">
+              {budget ? `$${budget.walletAllowanceRemainingUsd} allowance left` : "allowance unknown"}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Spend Trajectory Chart */}
-      <SpendArea budgetCeiling={parseFloat(budget?.hourlyBudgetUsd || "1.00")} />
+      <SpendArea
+        data={spend}
+        budgetCeiling={parseFloat(budget?.monthlyBudgetUsd || "0") || 0}
+        windowLabel="settled payments by this agent"
+        ceilingLabel="Monthly budget"
+      />
 
       {/* Recent Decisions for this Agent */}
       <DecisionFeed agentId={agent.id} limit={10} />
