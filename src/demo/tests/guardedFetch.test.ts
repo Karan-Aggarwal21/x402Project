@@ -58,6 +58,10 @@ describe("guardedFetch", () => {
       ok: true,
       data: { results: [{ title: "EV battery recycling capacity 2026" }] },
       txHash: "0xdeadbeef",
+      explorerUrl: undefined,
+      // Read straight off the success envelope, which is what lets the console link a settled
+      // payment to its own decision trace and not only the held ones.
+      intentId: "intent_1",
     });
   });
 
@@ -76,6 +80,7 @@ describe("guardedFetch", () => {
         code: "PER_TRANSACTION_LIMIT_EXCEEDED",
         message: "Transaction amount $2.00 exceeds the per-transaction limit of $0.10.",
       },
+      intentId: undefined,
     });
   });
 
@@ -92,6 +97,8 @@ describe("guardedFetch", () => {
       ok: false,
       blocked: { code: "APPROVAL_REQUIRED", message: "Payment is awaiting human review." },
       approval: { intentId: "intent_9", expiresAt: "2026-08-15T09:15:00Z" },
+      // A held payment has a record like any other; the console links to it.
+      intentId: "intent_9",
     });
   });
 

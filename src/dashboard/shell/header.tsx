@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { RotateCcw, Activity, CheckCircle2, Shield } from "lucide-react";
+import { ApprovalsBell } from "@/dashboard/components/approvals-bell";
 
 export const TOP_NAV = [
   { href: "/overview", label: "Overview" },
@@ -12,6 +13,7 @@ export const TOP_NAV = [
   { href: "/approvals", label: "Approvals" },
   { href: "/merchants", label: "Merchants" },
   { href: "/audit", label: "Audit Log" },
+  { href: "/console", label: "Agent Console" },
   { href: "/simulator", label: "Simulator" },
 ];
 
@@ -69,6 +71,8 @@ export function Header() {
 
       {/* Right: Live Status & Reset */}
       <div className="flex items-center gap-3">
+        <ApprovalsBell />
+
         <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
           <Activity className="h-3 w-3 text-emerald-600 animate-pulse" />
           Gateway Live

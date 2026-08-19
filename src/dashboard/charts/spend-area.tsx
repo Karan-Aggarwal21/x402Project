@@ -10,33 +10,32 @@ import {
   ReferenceLine,
 } from "recharts";
 
-/** OWNER: UI · Recharts area chart: 24 h spend vs budget. */
+export interface SpendPoint {
+  time: string;
+  spend: number;
+}
+
+/** OWNER: UI · Recharts area chart: cumulative settled spend against a policy ceiling. */
 export function SpendArea({
-  data = [
-    { time: "09:00", spend: 0.05, budget: 1.0 },
-    { time: "10:00", spend: 0.15, budget: 1.0 },
-    { time: "11:00", spend: 0.28, budget: 1.0 },
-    { time: "12:00", spend: 0.45, budget: 1.0 },
-    { time: "13:00", spend: 0.62, budget: 1.0 },
-    { time: "14:00", spend: 0.78, budget: 1.0 },
-    { time: "15:00", spend: 0.95, budget: 1.0 },
-    { time: "16:00", spend: 1.15, budget: 1.0 },
-    { time: "17:00", spend: 1.35, budget: 1.0 },
-  ],
+  data,
   budgetCeiling = 1.0,
+  windowLabel = "settled payments",
+  ceilingLabel = "Limit",
 }: {
-  data?: { time: string; spend: number; budget: number }[];
+  data: SpendPoint[];
   budgetCeiling?: number;
+  windowLabel?: string;
+  ceilingLabel?: string;
 }) {
   return (
     <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">
-            Cumulative Spend Trajectory (24h)
+            Cumulative spend
           </h3>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Hourly spend tracking against configured policy ceiling.
+            {data.length} {windowLabel}, summed in order of settlement.
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
@@ -46,11 +45,17 @@ export function SpendArea({
           </span>
           <span className="flex items-center gap-1.5 text-zinc-400">
             <span className="h-2 w-2 rounded-full bg-zinc-300" />
-            Hourly Limit (${budgetCeiling.toFixed(2)})
+            {ceilingLabel} (${budgetCeiling.toFixed(2)})
           </span>
         </div>
       </div>
 
+      {data.length === 0 ? (
+        <p className="py-16 text-center text-sm text-zinc-400">
+          This agent has not settled a payment yet. Blocked and held payments never reach the chain,
+          so nothing is plotted for them.
+        </p>
+      ) : (
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -88,7 +93,7 @@ export function SpendArea({
               stroke="#ef4444"
               strokeDasharray="3 3"
               label={{
-                value: `Limit: $${budgetCeiling.toFixed(2)}`,
+                value: `${ceilingLabel}: $${budgetCeiling.toFixed(2)}`,
                 fill: "#ef4444",
                 fontSize: 10,
                 position: "right",
@@ -105,6 +110,7 @@ export function SpendArea({
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      )}
     </div>
   );
 }

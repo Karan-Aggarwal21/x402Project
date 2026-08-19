@@ -9,6 +9,8 @@ export interface GuardedResult {
   data?: unknown;
   txHash?: string;
   explorerUrl?: string;
+  /** The Guard's record of this payment, whatever it decided. */
+  intentId?: string;
   /** Present on a 202 APPROVAL_REQUIRED — D7 uses the intentId to find and approve the hold. */
   approval?: { intentId?: string; expiresAt?: string };
 }
@@ -32,6 +34,7 @@ const GUARD_KEY_HEADER = "X-Guard-Key";
 const successEnvelope = z.object({
   status: z.literal(true),
   data: z.object({
+    intentId: z.string().optional(),
     onChain: z.object({
       txHash: z.string().nullable(),
       explorerUrl: z.string().nullable().optional(),
@@ -93,6 +96,7 @@ export async function guardedFetch(
           data: parsed.data.data.response,
           txHash: parsed.data.data.onChain.txHash ?? undefined,
           explorerUrl: parsed.data.data.onChain.explorerUrl ?? undefined,
+          intentId: parsed.data.data.intentId,
         }
       : blockedResult("GUARD_UNAVAILABLE", "Guard returned a malformed success envelope.");
   }
@@ -104,6 +108,7 @@ export async function guardedFetch(
   const { code } = parsed.data.error;
   const details = parsed.data.error.details;
   const result = blockedResult(code, parsed.data.message);
+  result.intentId = details?.intentId;
   if (code === "APPROVAL_REQUIRED" && details?.intentId) {
     result.approval = { intentId: details.intentId, expiresAt: details.expiresAt };
   }

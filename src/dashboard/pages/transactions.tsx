@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/dashboard/api-client/client";
 import { API } from "@/dashboard/api-client/endpoints";
 import { TxTable } from "@/dashboard/components/tx-table";
+import { FundFlow } from "@/dashboard/components/fund-flow";
 import { toFeedItem, type LiveDecisionItem, type TransactionRow } from "@/dashboard/hooks/useLiveDecisions";
 import {
   ArrowLeftRight,
@@ -34,8 +35,7 @@ export function TransactionsPage() {
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadTransactions() {
+  const loadTransactions = useCallback(async () => {
       try {
         setLoading(true);
         // Money protected is measured over the guard's window by CORE, so it comes from the
@@ -44,7 +44,7 @@ export function TransactionsPage() {
         // and joined here. A failure leaves agentName undefined and the table falls back to the id,
         // which is the point: a row must never display an agent it cannot actually identify.
         const [data, summary, roster] = await Promise.all([
-          apiGet<TransactionsApiResponse>(API.transactions),
+          apiGet<TransactionsApiResponse>(`${API.transactions}?limit=200`),
           apiGet<MetricsSummary>(API.metrics).catch(() => null),
           apiGet<AgentsApiResponse>(API.agents).catch(() => null),
         ]);
@@ -59,10 +59,13 @@ export function TransactionsPage() {
       } finally {
         setLoading(false);
       }
-    }
-
-    loadTransactions();
   }, []);
+
+  useEffect(() => {
+    // Kicked off in a microtask: the loader sets state before its first await, and doing that
+    // synchronously inside an effect updates state mid-commit.
+    void Promise.resolve().then(loadTransactions);
+  }, [loadTransactions]);
 
   // `|| 30` here used to fire whenever a real count was legitimately zero, which is how "allowed 30"
   // ended up sitting next to "total 50". Counts are now exactly what the rows say.
@@ -286,6 +289,9 @@ export function TransactionsPage() {
           </div>
         </div>
       </div>
+
+      {/* Sender -> merchant balances and the settled transfers between them */}
+      <FundFlow transactions={transactions} loading={loading} onRefresh={loadTransactions} />
 
       {/* Payment Activity Table */}
       <TxTable transactions={transactions} loading={loading} />
