@@ -78,41 +78,61 @@ export function Hero({
         </nav>
       </header>
 
-      {/* 2. Left-Aligned Hero Content Shifted Higher */}
-      <div className="flex-1 flex flex-col items-start justify-center px-6 sm:px-12 md:px-16 text-left max-w-7xl mx-auto w-full -mt-12 sm:-mt-16">
-        {/* Headline Typography */}
-        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-blue-950 tracking-wider uppercase drop-shadow-[0_2px_12px_rgba(255,255,255,0.65)]">
-          {title}
-        </h1>
+      {/* 2. Balanced 2-Column Hero Content Area */}
+      <div className="flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-14 px-6 sm:px-12 md:px-16 text-left max-w-7xl mx-auto w-full py-8 sm:py-12 -mt-4 sm:-mt-8">
+        {/* Left Column: Typography & Action Buttons */}
+        <div className="flex-1 flex flex-col items-start justify-center max-w-2xl">
+          {/* Headline Typography */}
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-blue-950 tracking-wider uppercase drop-shadow-[0_2px_12px_rgba(255,255,255,0.65)]">
+            {title}
+          </h1>
 
-        {/* Tagline */}
-        <p className="mt-3 text-lg sm:text-xl md:text-2xl text-blue-900 font-semibold tracking-wide drop-shadow-[0_1px_8px_rgba(255,255,255,0.7)] max-w-3xl leading-relaxed">
-          {subtitle || "Deterministic policy enforcement gateway & cryptographic audit trail for autonomous agent spend on Algorand TestNet."}
-        </p>
+          {/* Tagline */}
+          <p className="mt-3 text-lg sm:text-xl md:text-2xl text-blue-900 font-semibold tracking-wide drop-shadow-[0_1px_8px_rgba(255,255,255,0.7)] max-w-2xl leading-relaxed">
+            {subtitle || "Deterministic policy enforcement gateway & cryptographic audit trail for autonomous agent spend on Algorand TestNet."}
+          </p>
 
-        {/* Action Pill Buttons */}
-        <div className="mt-8 flex flex-wrap items-center justify-start gap-4">
-          <button
-            type="button"
-            onClick={scrollToOverview}
-            className="px-7 py-3 rounded-full bg-white text-blue-900 font-bold text-sm tracking-wide shadow-lg hover:bg-white/95 active:scale-98 transition-all cursor-pointer"
-          >
-            Overview
-          </button>
+          {/* Action Pill Buttons */}
+          <div className="mt-8 flex flex-wrap items-center justify-start gap-4">
+            <button
+              type="button"
+              onClick={scrollToOverview}
+              className="px-7 py-3.5 rounded-full bg-white text-blue-900 font-bold text-sm tracking-wide shadow-lg hover:bg-white/95 active:scale-98 transition-all cursor-pointer"
+            >
+              Overview
+            </button>
 
-          <Link
-            href="/console"
-            className="px-7 py-3 rounded-full bg-white/80 hover:bg-white active:scale-98 backdrop-blur-md border border-white/80 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
-          >
-            Agent Console
-          </Link>
+            <Link
+              href="/console"
+              className="px-7 py-3.5 rounded-full bg-white/80 hover:bg-white active:scale-98 backdrop-blur-md border border-white/80 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
+            >
+              Agent Console
+            </Link>
 
-          <Link
-            href="/simulator"
-            className="px-7 py-3 rounded-full bg-white/60 hover:bg-white/80 active:scale-98 backdrop-blur-md border border-white/70 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
-          >
-            Attack Drills (D1–D7)
-          </Link>
+            <Link
+              href="/simulator"
+              className="px-7 py-3.5 rounded-full bg-white/60 hover:bg-white/80 active:scale-98 backdrop-blur-md border border-white/70 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
+            >
+              Attack Drills (D1–D7)
+            </Link>
+          </div>
+        </div>
+
+        {/* Right Column: Modern Glassmorphic Video Showcase Card */}
+        <div className="flex-1 w-full max-w-lg lg:max-w-xl flex justify-center lg:justify-end">
+          <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-slate-900/40 backdrop-blur-md border border-white/40 shadow-2xl shadow-blue-950/25 animate-float transition-all duration-500 ease-out hover:scale-[1.02] hover:shadow-blue-500/20 hover:border-white/60">
+            <video
+              src="/video.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-cover"
+            />
+            {/* Subtle inner highlight border */}
+            <div className="absolute inset-0 pointer-events-none rounded-3xl ring-1 ring-inset ring-white/20" />
+          </div>
         </div>
       </div>
 
