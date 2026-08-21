@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { Shield } from "lucide-react";
 import { CloudShader } from "./cloud-shader";
-import { WardenIllustration } from "./warden-illustration";
 
 export type HeroProps = {
   title?: string;
@@ -14,7 +13,7 @@ export type HeroProps = {
 
 export function Hero({
   title = "WARDEN",
-  subtitle = "Control autonomous spending",
+  subtitle = "Control autonomous payments",
   withShader = false,
 }: HeroProps) {
   const scrollToOverview = () => {
@@ -25,7 +24,7 @@ export function Hero({
   };
 
   const content = (
-    <div className="relative z-20 flex flex-col justify-between min-h-[85vh] w-full">
+    <div className="relative z-20 flex flex-col justify-between min-h-[75vh] w-full">
       {/* 1. Top Navbar */}
       <header className="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
         {/* Brand Logo */}
@@ -39,12 +38,24 @@ export function Hero({
         </Link>
 
         {/* Navigation Links */}
-        <nav className="flex items-center gap-4 sm:gap-7 text-sm font-medium text-white/90">
+        <nav className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-semibold text-white/90">
+          <Link
+            href="/console"
+            className="hover:text-white transition-colors drop-shadow-sm hover:underline underline-offset-4"
+          >
+            Console
+          </Link>
           <Link
             href="/transactions"
             className="hover:text-white transition-colors drop-shadow-sm hover:underline underline-offset-4"
           >
             Transactions
+          </Link>
+          <Link
+            href="/approvals"
+            className="hover:text-white transition-colors drop-shadow-sm hover:underline underline-offset-4"
+          >
+            Approvals
           </Link>
           <Link
             href="/agents"
@@ -59,59 +70,54 @@ export function Hero({
             Audit Log
           </Link>
           <Link
-            href="/merchants"
+            href="/simulator"
             className="hover:text-white transition-colors drop-shadow-sm hover:underline underline-offset-4"
           >
-            Merchants
-          </Link>
-          <Link
-            href="/approvals"
-            className="hover:text-white transition-colors drop-shadow-sm hover:underline underline-offset-4"
-          >
-            Approval
+            Attack Drills
           </Link>
         </nav>
       </header>
 
-      {/* 2. Centered Hero Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 text-center max-w-4xl mx-auto">
-        {/* Cartoon Illustration (Robot + Guard with Shield) */}
-        <div className="w-full max-w-md md:max-w-xl mb-3">
-          <WardenIllustration />
-        </div>
-
-        {/* Headline Typography. Navy, not white: the sky carries white clouds behind this text and
-            white-on-cloud disappears. The pale halo keeps it separated from the darker sky above. */}
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-blue-950 tracking-wider uppercase drop-shadow-[0_2px_12px_rgba(255,255,255,0.65)]">
+      {/* 2. Left-Aligned Hero Content Shifted Higher */}
+      <div className="flex-1 flex flex-col items-start justify-center px-6 sm:px-12 md:px-16 text-left max-w-7xl mx-auto w-full -mt-12 sm:-mt-16">
+        {/* Headline Typography */}
+        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-blue-950 tracking-wider uppercase drop-shadow-[0_2px_12px_rgba(255,255,255,0.65)]">
           {title}
         </h1>
 
         {/* Tagline */}
-        <p className="mt-2 text-xl sm:text-2xl text-blue-900 font-semibold tracking-wide drop-shadow-[0_1px_8px_rgba(255,255,255,0.7)]">
-          {subtitle}
+        <p className="mt-3 text-lg sm:text-xl md:text-2xl text-blue-900 font-semibold tracking-wide drop-shadow-[0_1px_8px_rgba(255,255,255,0.7)] max-w-3xl leading-relaxed">
+          {subtitle || "Deterministic policy enforcement gateway & cryptographic audit trail for autonomous agent spend on Algorand TestNet."}
         </p>
 
         {/* Action Pill Buttons */}
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
+        <div className="mt-8 flex flex-wrap items-center justify-start gap-4">
           <button
             type="button"
             onClick={scrollToOverview}
-            className="px-8 py-3 rounded-full bg-white text-blue-900 font-bold text-sm tracking-wide shadow-lg hover:bg-white/95 active:scale-98 transition-all cursor-pointer"
+            className="px-7 py-3 rounded-full bg-white text-blue-900 font-bold text-sm tracking-wide shadow-lg hover:bg-white/95 active:scale-98 transition-all cursor-pointer"
           >
             Overview
           </button>
 
           <Link
-            href="/simulator"
-            className="px-8 py-3 rounded-full bg-white/65 hover:bg-white/80 active:scale-98 backdrop-blur-md border border-white/80 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
+            href="/console"
+            className="px-7 py-3 rounded-full bg-white/80 hover:bg-white active:scale-98 backdrop-blur-md border border-white/80 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
           >
-            Simulator
+            Agent Console
+          </Link>
+
+          <Link
+            href="/simulator"
+            className="px-7 py-3 rounded-full bg-white/60 hover:bg-white/80 active:scale-98 backdrop-blur-md border border-white/70 text-blue-900 font-bold text-sm tracking-wide shadow-md transition-all cursor-pointer"
+          >
+            Attack Drills (D1–D7)
           </Link>
         </div>
       </div>
 
       {/* Decorative Bottom Spacer */}
-      <div className="h-6 w-full pointer-events-none" />
+      <div className="h-4 w-full pointer-events-none" />
     </div>
   );
 
